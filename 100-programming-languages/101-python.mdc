@@ -1,0 +1,185 @@
+---
+id: 101
+title: Python 最佳实践
+description: Python 3.12+ 现代软件开发的最佳实践和模式，包括 Flask Web 应用和 SQLAlchemy 数据库操作
+globs: ["**/*.py", "src/**/*.py", "tests/**/*.py"]
+priority: high
+tags: [python, flask, sqlalchemy, testing, web-development]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-10-26
+---
+
+# Python 最佳实践
+
+## 适用场景
+
+- Python 3.12+ 项目开发
+- Flask Web 应用开发
+- SQLAlchemy 数据库操作
+- 现代 Web 服务开发
+- API 服务开发
+- 微服务架构
+
+## 核心内容
+
+Python 开发的核心最佳实践，涵盖项目结构、代码风格、类型提示、Flask 应用架构、数据库操作、安全认证等全方位指导。
+
+## 关键原则
+
+- ✅ 使用 src-layout 项目结构
+- ✅ 遵循 PEP 8 和 Black 代码风格
+- ✅ 所有函数使用类型提示
+- ✅ 优先使用 async/await 进行异步编程
+- ✅ 使用 Flask 工厂模式和蓝图组织代码
+- ✅ 实施全面的测试策略
+- ✅ 遵循 OWASP 安全准则
+
+## 项目结构
+
+使用标准的 src-layout 结构：
+
+```
+project/
+├── src/
+│   └── your_package_name/
+│       ├── __init__.py
+│       ├── app.py
+│       ├── models/
+│       ├── views/
+│       └── utils/
+├── tests/
+├── config/
+├── static/
+├── templates/
+├── requirements.txt
+└── pyproject.toml
+```
+
+## 代码风格
+
+- 使用 Black 代码格式化
+- 使用 isort 进行导入排序
+- 遵循 PEP 8 命名约定：
+  - 函数和变量使用 snake_case
+  - 类使用 PascalCase
+  - 常量使用 UPPER_CASE
+- 最大行长度 88 字符（Black 默认）
+- 优先使用绝对导入而非相对导入
+
+## 类型提示
+
+- 所有函数参数和返回值使用类型提示
+- 从 `typing` 模块导入类型
+- 使用 `Optional[Type]` 而非 `Type | None`
+- 使用 `TypeVar` 定义泛型类型
+- 在 `types.py` 中定义自定义类型
+- 使用 `Protocol` 进行鸭子类型
+
+## Flask 应用结构
+
+- 使用 Flask 工厂模式
+- 使用蓝图（Blueprints）组织路由
+- 使用 Flask-SQLAlchemy 进行数据库操作
+- 实现适当的错误处理器
+- 使用 Flask-Login 进行身份验证
+- 视图层保持关注点分离
+
+## 数据库操作
+
+- 使用 SQLAlchemy ORM
+- 使用 Alembic 进行数据库迁移
+- 使用适当的连接池
+- 在独立模块中定义模型
+- 实现适当的关系映射
+- 使用适当的索引策略
+
+## 身份认证
+
+- 使用 Flask-Login 进行会话管理
+- 使用 Flask-OAuth 实现 Google OAuth
+- 使用 bcrypt 对密码进行哈希
+- 使用适当的会话安全配置
+- 实现 CSRF 保护
+- 使用适当的基于角色的访问控制
+
+## API 设计
+
+- 使用 Flask-RESTful 构建 REST API
+- 实现适当的请求验证
+- 使用适当的 HTTP 状态码
+- 一致地处理错误
+- 使用适当的响应格式
+- 实现适当的速率限制
+
+## 测试策略
+
+- 使用 pytest 进行测试
+- 为所有路由编写测试
+- 使用 pytest-cov 进行覆盖率测试
+- 实现适当的测试夹具
+- 使用 pytest-mock 进行适当的模拟
+- 测试所有错误场景
+
+## 安全实践
+
+- 在生产环境中使用 HTTPS
+- 实现适当的 CORS 策略
+- 清理所有用户输入
+- 使用适当的会话配置
+- 实现适当的日志记录
+- 遵循 OWASP 安全准则
+
+## 性能优化
+
+- 使用 Flask-Caching 进行适当的缓存
+- 实现数据库查询优化
+- 使用适当的连接池
+- 实现适当的分页
+- 对重型操作使用后台任务
+- 监控应用程序性能
+
+## 错误处理
+
+- 创建自定义异常类
+- 使用适当的 try-except 块
+- 实现适当的日志记录
+- 返回适当的错误响应
+- 适当处理边缘情况
+- 使用适当的错误消息
+
+## 工具配置
+
+**推荐版本和配置：**
+- Python 3.12+
+- Flask 3.0+
+- SQLAlchemy 2.0+
+- pytest 7.0+
+- Black 23.0+
+
+**pyproject.toml 配置示例：**
+```toml
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+```
+
+## 常见问题
+
+**Q: 如何处理循环导入？**
+A: 使用延迟导入或将共享代码移到单独的模块中。
+
+**Q: 如何优化数据库查询？**
+A: 使用 eager loading、索引和查询分析工具。
+
+## 扩展阅读
+
+- [Python 官方文档](https://docs.python.org/)
+- [Flask 官方文档](https://flask.palletsprojects.com/)
+- [SQLAlchemy 官方文档](https://docs.sqlalchemy.org/)
+- [PEP 8 - Python 代码风格指南](https://peps.python.org/pep-0008/)
+- [Google Python 风格指南](https://google.github.io/styleguide/pyguide.html)

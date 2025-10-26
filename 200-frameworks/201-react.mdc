@@ -1,0 +1,155 @@
+---
+id: 201
+title: React 最佳实践
+description: React 18+ 现代 Web 应用的最佳实践和模式，包括组件设计、Hooks 使用和性能优化
+globs: ["**/*.tsx", "**/*.jsx", "components/**/*"]
+priority: high
+tags: [react, hooks, components, performance, testing]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-10-26
+---
+
+# React 最佳实践
+
+## 适用场景
+
+- React 18+ 应用开发
+- 函数式组件和 Hooks
+- 现代 Web 应用
+- 组件化开发
+- TypeScript + React 项目
+- 单页应用（SPA）
+
+## 核心内容
+
+React 开发的核心最佳实践，涵盖组件结构、Hooks 使用、状态管理、性能优化、表单处理、错误处理、测试和无障碍访问等方面。
+
+## 关键原则
+
+- ✅ 优先使用函数式组件而非类组件
+- ✅ 保持组件小而专注
+- ✅ 组合优于继承
+- ✅ 使用 TypeScript 进行类型检查
+- ✅ 实现适当的记忆化（memoization）
+- ✅ 遵循 React Hooks 规则
+- ✅ 实现错误边界和无障碍访问
+
+## 组件结构
+
+- 优先使用函数式组件而非类组件
+- 保持组件小而专注
+- 将可重用逻辑提取到自定义 Hooks 中
+- 组合优于继承
+- 使用 TypeScript 实现适当的 prop 类型
+- 将大型组件拆分为更小、更专注的组件
+
+## Hooks 使用
+
+- 遵循 Hooks 规则
+- 使用自定义 hooks 处理可重用逻辑
+- 保持 hooks 专注和简单
+- 在 useEffect 中使用适当的依赖数组
+- 需要时在 useEffect 中实现清理
+- 避免嵌套 hooks
+
+## 状态管理
+
+- 本地组件状态使用 useState
+- 复杂状态逻辑实现 useReducer
+- 共享状态使用 Context API
+- 将状态保持在尽可能接近使用的地方
+- 通过适当的状态管理避免 prop drilling
+- 仅在必要时使用状态管理库
+
+## 性能优化
+
+- 实现适当的记忆化（useMemo, useCallback）
+- 昂贵组件使用 React.memo
+- 避免不必要的重新渲染
+- 实现适当的懒加载
+- 列表中使用适当的 key props
+- 分析并优化渲染性能
+
+## 表单处理
+
+- 表单输入使用受控组件
+- 实现适当的表单验证
+- 适当处理表单提交状态
+- 显示适当的加载和错误状态
+- 复杂表单使用表单库
+- 实现表单的适当无障碍访问
+
+## 错误处理
+
+- 实现错误边界（Error Boundaries）
+- 适当处理异步错误
+- 显示用户友好的错误消息
+- 实现适当的回退 UI
+- 适当记录错误日志
+- 优雅地处理边缘情况
+
+## 测试策略
+
+- 为组件编写单元测试
+- 复杂流程实现集成测试
+- 使用 React Testing Library
+- 测试用户交互
+- 测试错误场景
+- 实现适当的模拟数据
+
+## 无障碍访问
+
+- 使用语义化 HTML 元素
+- 实现适当的 ARIA 属性
+- 确保键盘导航
+- 使用屏幕阅读器测试
+- 处理焦点管理
+- 为图片提供适当的 alt 文本
+
+## 工具配置
+
+**推荐版本和配置：**
+- React 18+
+- TypeScript 5+
+- React Testing Library 13+
+- ESLint React 插件
+
+**组件示例：**
+```tsx
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick: () => void;
+  variant?: 'primary' | 'secondary';
+}
+
+const Button: React.FC<ButtonProps> = ({ 
+  children, 
+  onClick, 
+  variant = 'primary' 
+}) => {
+  return (
+    <button 
+      className={`btn btn-${variant}`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+};
+```
+
+## 常见问题
+
+**Q: 何时使用 useCallback 和 useMemo？**
+A: 仅在有性能问题时使用，避免过度优化。
+
+**Q: 如何处理组件间通信？**
+A: 优先使用 props，复杂情况使用 Context 或状态管理库。
+
+## 扩展阅读
+
+- [React 官方文档](https://react.dev/)
+- [React Testing Library 文档](https://testing-library.com/docs/react-testing-library/intro/)
+- [React Patterns](https://reactpatterns.com/)
+- [React Performance 指南](https://react.dev/learn/render-and-commit)
