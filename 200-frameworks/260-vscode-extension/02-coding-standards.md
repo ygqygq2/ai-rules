@@ -539,9 +539,9 @@ Logger.debug('Processing rules', { count: rules.length, sourceId });
 
 ### 引号
 
-- 优先使用 **单引号** `'`
-- 模板字符串使用反引号 `` ` ``
-- JSX 属性使用双引号 `"`
+- 优先使用 **单引号**
+- 模板字符串使用反引号
+- JSX 属性使用双引号
 
 ### 分号
 
