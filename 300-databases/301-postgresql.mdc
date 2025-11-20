@@ -1,0 +1,330 @@
+---
+id: 301
+title: PostgreSQL 最佳实践
+description: PostgreSQL 数据库设计、查询优化和性能调优的最佳实践
+globs: ["**/*.sql", "migrations/**/*", "**/*migration*.sql"]
+priority: medium
+tags: [postgresql, database, sql, performance, migrations]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# PostgreSQL 最佳实践
+
+## 适用场景
+
+- PostgreSQL 14+ 数据库开发
+- 关系型数据库设计
+- SQL 查询优化
+- 数据库迁移
+- 性能调优和监控
+
+## 核心内容
+
+PostgreSQL 数据库开发的核心最佳实践，涵盖表设计、索引策略、查询优化、事务处理和性能监控等方面。
+
+## 关键原则
+
+- ✅ 使用适当的数据类型和约束
+- ✅ 为查询模式设计合适的索引
+- ✅ 使用事务确保数据一致性
+- ✅ 避免 N+1 查询问题
+- ✅ 使用 EXPLAIN ANALYZE 分析查询性能
+- ✅ 实施适当的备份和恢复策略
+
+## 表设计
+
+- 使用主键（优先使用 SERIAL 或 UUID）
+- 定义适当的外键约束
+- 使用 NOT NULL 约束必填字段
+- 使用 CHECK 约束验证数据
+- 使用 UNIQUE 约束唯一性
+- 选择合适的数据类型
+
+**表设计示例：**
+
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$')
+);
+
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_created_at ON users(created_at DESC);
+```
+
+## 索引策略
+
+- 为频繁查询的列创建索引
+- 使用复合索引优化多列查询
+- 避免过度索引
+- 使用部分索引优化特定条件
+- 使用 BRIN 索引优化时间序列数据
+- 定期使用 REINDEX 维护索引
+
+**索引类型选择：**
+
+```sql
+-- B-tree 索引（默认，适合大多数场景）
+CREATE INDEX idx_users_username ON users(username);
+
+-- 复合索引（查询多列时）
+CREATE INDEX idx_users_name ON users(last_name, first_name);
+
+-- 部分索引（只索引特定条件）
+CREATE INDEX idx_active_users ON users(email) WHERE is_active = true;
+
+-- GIN 索引（全文搜索、JSONB）
+CREATE INDEX idx_posts_content ON posts USING gin(to_tsvector('english', content));
+
+-- BRIN 索引（时间序列数据）
+CREATE INDEX idx_logs_created_at ON logs USING brin(created_at);
+```
+
+## 查询优化
+
+- 使用 SELECT 指定需要的列，避免 SELECT \*
+- 使用 JOIN 而非子查询（大多数情况）
+- 使用 EXISTS 而非 IN（大数据集）
+- 避免在 WHERE 子句中使用函数
+- 使用 LIMIT 限制返回行数
+- 使用 CTE 提高可读性
+
+**查询优化示例：**
+
+```sql
+-- ❌ 避免
+SELECT * FROM users WHERE LOWER(email) = 'user@example.com';
+
+-- ✅ 推荐
+SELECT id, email, username FROM users WHERE email = 'user@example.com';
+
+-- ❌ 避免 N+1 查询
+SELECT * FROM posts;
+-- 然后在应用层循环查询每个作者
+
+-- ✅ 使用 JOIN
+SELECT p.*, u.username
+FROM posts p
+JOIN users u ON p.user_id = u.id;
+
+-- ✅ 使用 CTE 提高可读性
+WITH active_users AS (
+    SELECT id, email FROM users WHERE is_active = true
+)
+SELECT p.*
+FROM posts p
+JOIN active_users u ON p.user_id = u.id;
+```
+
+## 事务处理
+
+- 使用事务确保数据一致性
+- 保持事务简短
+- 使用适当的隔离级别
+- 处理死锁和并发问题
+- 使用 SAVEPOINT 处理部分回滚
+- 避免长事务
+
+**事务示例：**
+
+```sql
+BEGIN;
+
+-- 转账操作
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+
+-- 记录转账历史
+INSERT INTO transactions (from_account, to_account, amount, created_at)
+VALUES (1, 2, 100, NOW());
+
+COMMIT;
+
+-- 使用 SAVEPOINT
+BEGIN;
+
+INSERT INTO users (email, username) VALUES ('user@example.com', 'user');
+
+SAVEPOINT before_posts;
+
+INSERT INTO posts (user_id, title) VALUES (1, 'My Post');
+
+-- 如果需要回滚到 savepoint
+ROLLBACK TO SAVEPOINT before_posts;
+
+COMMIT;
+```
+
+## 性能优化
+
+- 使用 EXPLAIN ANALYZE 分析查询
+- 使用连接池管理连接
+- 定期执行 VACUUM 和 ANALYZE
+- 使用物化视图优化复杂查询
+- 配置适当的内存参数
+- 监控慢查询日志
+
+**性能分析：**
+
+```sql
+-- 分析查询计划
+EXPLAIN ANALYZE
+SELECT u.username, COUNT(p.id) as post_count
+FROM users u
+LEFT JOIN posts p ON u.id = p.user_id
+GROUP BY u.id, u.username;
+
+-- 查看表统计信息
+SELECT * FROM pg_stat_user_tables WHERE relname = 'users';
+
+-- 查看索引使用情况
+SELECT * FROM pg_stat_user_indexes WHERE relname = 'users';
+```
+
+## 数据迁移
+
+- 使用版本化的迁移文件
+- 每个迁移文件包含 UP 和 DOWN
+- 在事务中执行迁移
+- 备份数据库再执行迁移
+- 测试回滚操作
+- 记录迁移历史
+
+**迁移示例：**
+
+```sql
+-- migrations/001_create_users_table.sql
+-- UP
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- DOWN
+DROP TABLE users;
+```
+
+## 数据类型选择
+
+- 整数使用 INTEGER 或 BIGINT
+- 金额使用 NUMERIC(precision, scale)
+- 时间使用 TIMESTAMP 或 TIMESTAMPTZ
+- 文本使用 TEXT 或 VARCHAR(n)
+- 布尔值使用 BOOLEAN
+- JSON 数据使用 JSONB
+
+**数据类型示例：**
+
+```sql
+CREATE TABLE products (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    price NUMERIC(10, 2) NOT NULL,  -- 金额
+    stock INTEGER NOT NULL DEFAULT 0,
+    metadata JSONB,  -- 灵活的 JSON 数据
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_available BOOLEAN NOT NULL DEFAULT true
+);
+
+-- JSONB 查询
+SELECT * FROM products WHERE metadata->>'category' = 'electronics';
+CREATE INDEX idx_products_metadata ON products USING gin(metadata);
+```
+
+## 备份和恢复
+
+- 定期执行全量备份
+- 使用 pg_dump 导出数据
+- 配置 WAL 归档实现 PITR
+- 测试恢复流程
+- 监控备份任务
+- 保留多个备份版本
+
+**备份命令：**
+
+```bash
+# 备份整个数据库
+pg_dump -U postgres -d mydb -F c -f mydb_backup.dump
+
+# 备份特定表
+pg_dump -U postgres -d mydb -t users -F c -f users_backup.dump
+
+# 恢复数据库
+pg_restore -U postgres -d mydb -c mydb_backup.dump
+```
+
+## 安全实践
+
+- 使用参数化查询防止 SQL 注入
+- 限制数据库用户权限
+- 使用 SSL/TLS 加密连接
+- 定期更新密码
+- 启用审计日志
+- 限制网络访问
+
+**权限管理：**
+
+```sql
+-- 创建只读用户
+CREATE USER readonly_user WITH PASSWORD 'secure_password';
+GRANT CONNECT ON DATABASE mydb TO readonly_user;
+GRANT USAGE ON SCHEMA public TO readonly_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly_user;
+
+-- 创建应用用户（读写权限）
+CREATE USER app_user WITH PASSWORD 'secure_password';
+GRANT CONNECT ON DATABASE mydb TO app_user;
+GRANT USAGE, CREATE ON SCHEMA public TO app_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+```
+
+## 工具配置
+
+**推荐版本和工具：**
+
+- PostgreSQL 14+
+- pgAdmin 4 或 DBeaver（图形化管理）
+- pg_stat_statements（查询分析）
+- pgBadger（日志分析）
+
+**postgresql.conf 优化：**
+
+```conf
+# 内存配置
+shared_buffers = 256MB
+effective_cache_size = 1GB
+work_mem = 16MB
+maintenance_work_mem = 128MB
+
+# 连接配置
+max_connections = 100
+
+# 查询优化
+random_page_cost = 1.1  # SSD 存储
+effective_io_concurrency = 200
+```
+
+## 常见问题
+
+**Q: 如何优化慢查询？**
+A: 使用 EXPLAIN ANALYZE 分析，添加合适的索引，重写查询逻辑。
+
+**Q: 什么时候使用 JSONB？**
+A: 需要存储灵活的、非结构化数据时，但仍需要查询能力。
+
+## 扩展阅读
+
+- [PostgreSQL 官方文档](https://www.postgresql.org/docs/)
+- [Use The Index, Luke](https://use-the-index-luke.com/)
+- [PostgreSQL Performance](https://www.postgresql.org/docs/current/performance-tips.html)
+- [pgexercises.com](https://pgexercises.com/) - SQL 练习

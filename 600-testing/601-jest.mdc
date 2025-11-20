@@ -1,0 +1,423 @@
+---
+id: 601
+title: Jest 测试最佳实践
+description: Jest 单元测试和集成测试的最佳实践
+globs: ["**/*.test.js", "**/*.test.ts", "**/*.spec.js", "**/*.spec.ts", "__tests__/**/*"]
+priority: medium
+tags: [jest, testing, unit-test, integration-test, tdd]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# Jest 测试最佳实践
+
+## 适用场景
+
+- Jest 单元测试
+- React 组件测试
+- Node.js 应用测试
+- 集成测试
+- TDD/BDD 开发
+- API 端点测试
+
+## 核心内容
+
+Jest 测试框架的核心最佳实践，涵盖测试组织、Mock 使用、异步测试、快照测试和覆盖率等方面。
+
+## 关键原则
+
+- ✅ 一个测试只测试一个功能点
+- ✅ 使用描述性的测试名称
+- ✅ 遵循 AAA 模式（Arrange-Act-Assert）
+- ✅ 测试公共接口而非实现细节
+- ✅ 使用 Mock 隔离外部依赖
+- ✅ 保持测试独立和可重复
+
+## 测试组织
+
+- 使用 describe 组织相关测试
+- 测试文件与源文件同名
+- 使用清晰的测试描述
+- 遵循 AAA 模式
+- 使用 beforeEach/afterEach 设置和清理
+- 保持测试简洁
+
+**测试组织示例：**
+
+```javascript
+// user.test.js
+describe("User", () => {
+  describe("constructor", () => {
+    it("should create a user with valid data", () => {
+      // Arrange
+      const userData = { name: "John", email: "john@example.com" };
+
+      // Act
+      const user = new User(userData);
+
+      // Assert
+      expect(user.name).toBe("John");
+      expect(user.email).toBe("john@example.com");
+    });
+
+    it("should throw error with invalid email", () => {
+      const userData = { name: "John", email: "invalid" };
+
+      expect(() => new User(userData)).toThrow("Invalid email");
+    });
+  });
+
+  describe("methods", () => {
+    let user;
+
+    beforeEach(() => {
+      user = new User({ name: "John", email: "john@example.com" });
+    });
+
+    it("should update user name", () => {
+      user.updateName("Jane");
+      expect(user.name).toBe("Jane");
+    });
+  });
+});
+```
+
+## 断言和匹配器
+
+- 使用合适的匹配器
+- 优先使用更具体的匹配器
+- 使用 not 修饰符
+- 测试边界情况
+- 使用自定义匹配器
+- 提供有意义的错误消息
+
+**断言示例：**
+
+```javascript
+// 基础匹配器
+expect(value).toBe(4); // 严格相等
+expect(value).toEqual({ a: 1, b: 2 }); // 深度相等
+expect(value).toBeTruthy(); // 真值
+expect(value).toBeFalsy(); // 假值
+expect(value).toBeNull(); // null
+expect(value).toBeUndefined(); // undefined
+expect(value).toBeDefined(); // 已定义
+
+// 数字匹配器
+expect(value).toBeGreaterThan(3);
+expect(value).toBeLessThanOrEqual(5);
+expect(value).toBeCloseTo(0.3, 1); // 浮点数
+
+// 字符串匹配器
+expect(str).toMatch(/pattern/);
+expect(str).toContain("substring");
+
+// 数组和对象匹配器
+expect(array).toContain(item);
+expect(array).toHaveLength(3);
+expect(obj).toHaveProperty("key", value);
+expect(obj).toMatchObject({ a: 1 });
+
+// 函数匹配器
+expect(fn).toThrow();
+expect(fn).toThrow(Error);
+expect(fn).toThrow("error message");
+```
+
+## Mock 和 Spy
+
+- 使用 Mock 隔离外部依赖
+- Mock 函数、模块和定时器
+- 验证函数调用
+- 使用 Spy 监视函数
+- 清理 Mock 状态
+- 使用 Mock 返回值
+
+**Mock 示例：**
+
+```javascript
+// Mock 函数
+const mockFn = jest.fn();
+mockFn.mockReturnValue(42);
+mockFn.mockResolvedValue("async value");
+mockFn.mockRejectedValue(new Error("error"));
+
+// 验证调用
+expect(mockFn).toHaveBeenCalled();
+expect(mockFn).toHaveBeenCalledTimes(2);
+expect(mockFn).toHaveBeenCalledWith("arg1", "arg2");
+expect(mockFn).toHaveBeenLastCalledWith("arg");
+
+// Mock 模块
+jest.mock("./user-service");
+const UserService = require("./user-service");
+UserService.getUser.mockResolvedValue({ id: 1, name: "John" });
+
+// Spy 函数
+const spy = jest.spyOn(object, "method");
+spy.mockReturnValue("mocked value");
+object.method();
+expect(spy).toHaveBeenCalled();
+spy.mockRestore();
+
+// Mock 定时器
+jest.useFakeTimers();
+setTimeout(callback, 1000);
+jest.advanceTimersByTime(1000);
+expect(callback).toHaveBeenCalled();
+jest.useRealTimers();
+```
+
+## 异步测试
+
+- 使用 async/await
+- 测试 Promise
+- 测试回调函数
+- 设置适当的超时
+- 处理错误情况
+- 使用 done 回调（必要时）
+
+**异步测试示例：**
+
+```javascript
+// async/await
+it("should fetch user data", async () => {
+  const user = await fetchUser(1);
+  expect(user.name).toBe("John");
+});
+
+// Promise
+it("should resolve with user data", () => {
+  return fetchUser(1).then((user) => {
+    expect(user.name).toBe("John");
+  });
+});
+
+// 测试 reject
+it("should reject with error", async () => {
+  await expect(fetchUser(-1)).rejects.toThrow("User not found");
+});
+
+// 回调函数
+it("should call callback with data", (done) => {
+  fetchUserCallback(1, (err, user) => {
+    expect(err).toBeNull();
+    expect(user.name).toBe("John");
+    done();
+  });
+});
+
+// 设置超时
+it("should complete within timeout", async () => {
+  await expect(slowOperation()).resolves.toBeDefined();
+}, 10000); // 10 秒超时
+```
+
+## React 组件测试
+
+- 使用 React Testing Library
+- 测试用户交互
+- 查询 DOM 元素
+- 测试组件行为而非实现
+- 使用 userEvent 模拟用户操作
+- 测试可访问性
+
+**React 测试示例：**
+
+```javascript
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import Button from "./Button";
+
+describe("Button", () => {
+  it("should render with text", () => {
+    render(<Button>Click me</Button>);
+    expect(screen.getByText("Click me")).toBeInTheDocument();
+  });
+
+  it("should call onClick when clicked", async () => {
+    const handleClick = jest.fn();
+    render(<Button onClick={handleClick}>Click</Button>);
+
+    await userEvent.click(screen.getByRole("button"));
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("should be disabled when loading", () => {
+    render(<Button isLoading>Submit</Button>);
+    expect(screen.getByRole("button")).toBeDisabled();
+  });
+
+  it("should display loading spinner", () => {
+    render(<Button isLoading>Submit</Button>);
+    expect(screen.getByTestId("loading-spinner")).toBeInTheDocument();
+  });
+});
+```
+
+## 快照测试
+
+- 用于 UI 组件测试
+- 保持快照小而专注
+- 审查快照变化
+- 不过度使用快照测试
+- 使用内联快照（小快照）
+- 定期更新快照
+
+**快照测试示例：**
+
+```javascript
+import { render } from "@testing-library/react";
+import UserCard from "./UserCard";
+
+it("should match snapshot", () => {
+  const user = { name: "John", email: "john@example.com" };
+  const { container } = render(<UserCard user={user} />);
+  expect(container).toMatchSnapshot();
+});
+
+// 内联快照
+it("should render user name", () => {
+  const user = { name: "John" };
+  const { container } = render(<UserCard user={user} />);
+  expect(container.firstChild).toMatchInlineSnapshot(`
+    <div class="user-card">
+      <h3>John</h3>
+    </div>
+  `);
+});
+```
+
+## 测试覆盖率
+
+- 设置覆盖率阈值
+- 关注重要代码路径
+- 不追求 100% 覆盖率
+- 测试边界情况
+- 使用覆盖率报告
+- 排除不必要的文件
+
+**jest.config.js 配置：**
+
+```javascript
+module.exports = {
+  collectCoverageFrom: ["src/**/*.{js,jsx,ts,tsx}", "!src/**/*.test.{js,jsx,ts,tsx}", "!src/index.js"],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+  coverageReporters: ["text", "lcov", "html"],
+};
+```
+
+## 集成测试
+
+- 测试多个模块协作
+- 使用真实依赖或 Mock
+- 测试 API 端点
+- 使用测试数据库
+- 清理测试数据
+- 测试完整流程
+
+**集成测试示例：**
+
+```javascript
+import request from "supertest";
+import app from "./app";
+import { connectDB, closeDB, clearDB } from "./test-db";
+
+describe("User API", () => {
+  beforeAll(async () => {
+    await connectDB();
+  });
+
+  afterAll(async () => {
+    await closeDB();
+  });
+
+  beforeEach(async () => {
+    await clearDB();
+  });
+
+  it("should create and retrieve user", async () => {
+    // 创建用户
+    const createRes = await request(app)
+      .post("/api/users")
+      .send({ name: "John", email: "john@example.com" })
+      .expect(201);
+
+    const userId = createRes.body.data.id;
+
+    // 获取用户
+    const getRes = await request(app).get(`/api/users/${userId}`).expect(200);
+
+    expect(getRes.body.data.name).toBe("John");
+  });
+});
+```
+
+## 测试最佳实践
+
+- 测试名称应描述测试内容
+- 一个测试一个断言（理想情况）
+- 避免测试私有方法
+- 使用工厂函数创建测试数据
+- 保持测试独立
+- 定期重构测试代码
+
+**测试数据工厂：**
+
+```javascript
+// test/factories/user.js
+export const createUser = (overrides = {}) => ({
+  id: "1",
+  name: "John Doe",
+  email: "john@example.com",
+  age: 30,
+  ...overrides,
+});
+
+// 使用
+const user = createUser({ name: "Jane" });
+```
+
+## 工具配置
+
+**推荐工具：**
+
+- Jest 29+
+- @testing-library/react
+- @testing-library/user-event
+- supertest（API 测试）
+
+**package.json 配置：**
+
+```json
+{
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  }
+}
+```
+
+## 常见问题
+
+**Q: 如何测试 Private 方法？**
+A: 不直接测试私有方法，通过测试公共接口间接测试。
+
+**Q: Mock 和 Spy 的区别？**
+A: Mock 完全替换实现，Spy 监视并可选择性替换。
+
+## 扩展阅读
+
+- [Jest 官方文档](https://jestjs.io/)
+- [Testing Library 文档](https://testing-library.com/)
+- [Kent C. Dodds - Testing JavaScript](https://testingjavascript.com/)
+- [Test-Driven Development](https://martinfowler.com/bliki/TestDrivenDevelopment.html)

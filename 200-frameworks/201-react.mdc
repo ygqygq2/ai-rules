@@ -3,7 +3,7 @@ id: 201
 title: React 最佳实践
 description: React 18+ 现代 Web 应用的最佳实践和模式，包括组件设计、Hooks 使用和性能优化
 globs: ["**/*.tsx", "**/*.jsx", "components/**/*"]
-priority: high
+priority: medium
 tags: [react, hooks, components, performance, testing]
 version: 1.0.0
 author: Turbo AI Rules
@@ -110,29 +110,24 @@ React 开发的核心最佳实践，涵盖组件结构、Hooks 使用、状态�
 ## 工具配置
 
 **推荐版本和配置：**
+
 - React 18+
 - TypeScript 5+
 - React Testing Library 13+
 - ESLint React 插件
 
 **组件示例：**
+
 ```tsx
 interface ButtonProps {
   children: React.ReactNode;
   onClick: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: "primary" | "secondary";
 }
 
-const Button: React.FC<ButtonProps> = ({ 
-  children, 
-  onClick, 
-  variant = 'primary' 
-}) => {
+const Button: React.FC<ButtonProps> = ({ children, onClick, variant = "primary" }) => {
   return (
-    <button 
-      className={`btn btn-${variant}`}
-      onClick={onClick}
-    >
+    <button className={`btn btn-${variant}`} onClick={onClick}>
       {children}
     </button>
   );

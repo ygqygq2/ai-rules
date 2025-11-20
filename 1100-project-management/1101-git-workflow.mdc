@@ -1,0 +1,654 @@
+---
+id: 1101
+title: Git 工作流最佳实践
+description: Git 分支策略、提交规范和团队协作的最佳实践
+globs: ["**/.git/**", "**/.gitignore", "**/.gitattributes"]
+priority: medium
+tags: [git, version-control, branching, commit-convention, workflow]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# Git 工作流最佳实践
+
+## 适用场景
+
+- 团队协作开发
+- 版本控制管理
+- 分支策略制定
+- 代码审查流程
+- 发布管理
+- 多环境部署
+
+## 核心内容
+
+Git 工作流的核心最佳实践，涵盖分支策略、提交规范、代码审查、冲突解决等方面。
+
+## 关键原则
+
+- ✅ 频繁提交，小步迭代
+- ✅ 有意义的提交信息
+- ✅ 分支命名规范
+- ✅ 代码审查必须
+- ✅ 保持主分支稳定
+- ✅ 使用 Pull Request/Merge Request
+- ✅ 自动化工作流
+
+## 分支策略
+
+### Git Flow
+
+适合定期发布的项目：
+
+```
+main (production)
+  ├── develop (development)
+  │   ├── feature/user-auth
+  │   ├── feature/payment-integration
+  │   └── feature/dashboard
+  ├── release/v1.2.0
+  └── hotfix/critical-bug
+
+分支类型：
+- main: 生产环境代码
+- develop: 开发环境代码
+- feature/*: 新功能开发
+- release/*: 发布准备
+- hotfix/*: 紧急修复
+```
+
+**工作流程：**
+
+```bash
+# 1. 从 develop 创建 feature 分支
+git checkout develop
+git pull origin develop
+git checkout -b feature/user-authentication
+
+# 2. 开发并提交
+git add .
+git commit -m "feat: implement user login"
+
+# 3. 推送到远程
+git push origin feature/user-authentication
+
+# 4. 创建 Pull Request 到 develop
+
+# 5. 准备发布
+git checkout develop
+git pull origin develop
+git checkout -b release/v1.2.0
+
+# 6. 发布后合并到 main 和 develop
+git checkout main
+git merge release/v1.2.0
+git tag -a v1.2.0 -m "Release version 1.2.0"
+git push origin main --tags
+
+git checkout develop
+git merge release/v1.2.0
+git push origin develop
+
+# 7. 紧急修复
+git checkout main
+git checkout -b hotfix/critical-security-issue
+# ... 修复代码 ...
+git commit -m "fix: patch security vulnerability"
+
+# 合并到 main 和 develop
+git checkout main
+git merge hotfix/critical-security-issue
+git tag -a v1.2.1 -m "Hotfix v1.2.1"
+git push origin main --tags
+
+git checkout develop
+git merge hotfix/critical-security-issue
+git push origin develop
+```
+
+### GitHub Flow
+
+适合持续部署的项目（更简单）：
+
+```
+main
+  ├── feature/add-user-profile
+  ├── feature/improve-search
+  └── fix/login-error
+
+流程：
+1. 从 main 创建分支
+2. 添加提交
+3. 创建 Pull Request
+4. 代码审查和讨论
+5. 部署测试
+6. 合并到 main
+7. 立即部署
+```
+
+**工作流程：**
+
+```bash
+# 1. 创建分支
+git checkout main
+git pull origin main
+git checkout -b feature/add-user-profile
+
+# 2. 开发和提交
+git add .
+git commit -m "feat: add user profile page"
+git push origin feature/add-user-profile
+
+# 3. 创建 Pull Request
+
+# 4. 审查通过后合并
+git checkout main
+git pull origin main
+# (通过 GitHub UI 合并或命令行)
+git merge feature/add-user-profile
+git push origin main
+
+# 5. 删除已合并的分支
+git branch -d feature/add-user-profile
+git push origin --delete feature/add-user-profile
+```
+
+### Trunk-Based Development
+
+适合高频部署的团队：
+
+```
+main (trunk)
+  ├── (短期) feature-flags
+  └── (极少) release-branches
+
+特点：
+- 直接在 main 分支开发
+- 使用 feature flags 控制功能
+- 每天至少一次合并
+- 极短生命周期的分支（小于1天）
+```
+
+## 分支命名规范
+
+```
+类型/范围-简短描述
+
+类型：
+- feature/  : 新功能
+- bugfix/   : Bug 修复
+- hotfix/   : 紧急修复
+- release/  : 发布分支
+- refactor/ : 重构
+- docs/     : 文档更新
+- test/     : 测试相关
+- chore/    : 杂项任务
+
+示例：
+✅ feature/user-authentication
+✅ bugfix/login-validation
+✅ hotfix/payment-gateway-error
+✅ release/v2.0.0
+✅ refactor/database-queries
+✅ docs/api-documentation
+✅ test/integration-tests
+
+❌ new-feature
+❌ fix
+❌ update
+❌ my-branch
+```
+
+## 提交规范（Conventional Commits）
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+
+类型（type）：
+- feat: 新功能
+- fix: Bug 修复
+- docs: 文档更新
+- style: 代码格式（不影响功能）
+- refactor: 重构
+- perf: 性能优化
+- test: 测试相关
+- build: 构建系统或外部依赖
+- ci: CI 配置
+- chore: 其他修改
+- revert: 回滚提交
+
+范围（scope）：可选，表示影响的模块
+主题（subject）：简短描述，不超过 50 字符
+正文（body）：可选，详细描述
+页脚（footer）：可选，Breaking Changes 或关闭 Issue
+```
+
+**提交示例：**
+
+```bash
+# 简单提交
+git commit -m "feat: add user login functionality"
+git commit -m "fix: resolve null pointer exception in payment"
+git commit -m "docs: update API documentation"
+
+# 带范围的提交
+git commit -m "feat(auth): implement JWT authentication"
+git commit -m "fix(ui): correct button alignment on mobile"
+
+# 完整提交（多行）
+git commit -m "feat(auth): implement social login
+
+Add support for Google and GitHub OAuth login.
+Users can now sign in using their social accounts.
+
+Closes #123"
+
+# Breaking Change
+git commit -m "feat(api): change user endpoint structure
+
+BREAKING CHANGE: User API endpoint changed from /api/user to /api/v2/users.
+Update all client applications to use the new endpoint."
+
+# 回滚提交
+git commit -m "revert: feat(auth): implement JWT authentication
+
+This reverts commit abc123def456.
+Reason: Performance issues in production."
+```
+
+**Commitlint 配置：**
+
+```javascript
+// commitlint.config.js
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      [
+        'feat',
+        'fix',
+        'docs',
+        'style',
+        'refactor',
+        'perf',
+        'test',
+        'build',
+        'ci',
+        'chore',
+        'revert'
+      ]
+    ],
+    'subject-case': [2, 'never', ['upper-case']],
+    'subject-max-length': [2, 'always', 72],
+    'body-max-line-length': [2, 'always', 100]
+  }
+};
+
+// package.json
+{
+  "husky": {
+    "hooks": {
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  }
+}
+```
+
+## Pull Request 最佳实践
+
+**PR 标题：**
+
+```
+遵循 Conventional Commits 规范
+
+✅ feat: add user profile page
+✅ fix: resolve login redirect issue
+✅ refactor: optimize database queries
+
+❌ Update code
+❌ Fix bug
+❌ WIP
+```
+
+**PR 描述模板：**
+
+```markdown
+## 变更类型
+
+- [ ] 新功能
+- [ ] Bug 修复
+- [ ] 重构
+- [ ] 文档更新
+- [ ] 其他
+
+## 变更描述
+
+简要描述本次 PR 的内容和目的。
+
+## 相关 Issue
+
+Closes #123
+Relates to #456
+
+## 测试
+
+描述如何测试这些变更：
+
+- [ ] 单元测试已通过
+- [ ] 集成测试已通过
+- [ ] 手动测试已完成
+
+## 截图（如适用）
+
+添加相关截图或 GIF
+
+## 检查清单
+
+- [ ] 代码遵循项目规范
+- [ ] 已添加必要的测试
+- [ ] 文档已更新
+- [ ] 所有测试通过
+- [ ] 无新的警告
+- [ ] 已自测所有功能
+
+## 注意事项
+
+列出需要特别注意的地方或潜在影响。
+```
+
+**.github/pull_request_template.md：**
+
+```markdown
+## 📝 变更描述
+
+## 🔗 相关 Issue
+
+## 🧪 测试计划
+
+- [ ] 单元测试
+- [ ] 集成测试
+- [ ] 手动测试
+
+## 📸 截图
+
+## ✅ 检查清单
+
+- [ ] 代码符合规范
+- [ ] 测试已通过
+- [ ] 文档已更新
+- [ ] 无 Breaking Changes（或已在描述中说明）
+
+## 💡 其他信息
+```
+
+## 代码审查规范
+
+**审查者检查项：**
+
+```
+功能性：
+✅ 代码是否实现了预期功能
+✅ 边界条件是否处理
+✅ 错误处理是否完善
+
+代码质量：
+✅ 代码是否易读易维护
+✅ 命名是否清晰
+✅ 是否有重复代码
+✅ 是否遵循项目规范
+
+安全性：
+✅ 是否有安全漏洞
+✅ 输入验证是否充分
+✅ 敏感信息是否泄露
+
+性能：
+✅ 是否有性能问题
+✅ 数据库查询是否优化
+✅ 是否有内存泄漏
+
+测试：
+✅ 测试覆盖率是否足够
+✅ 测试是否有意义
+✅ 边缘情况是否测试
+```
+
+**审查评论示例：**
+
+````markdown
+✅ 建设性反馈：
+"这里可以使用 Array.map() 简化代码：
+
+```javascript
+const names = users.map((user) => user.name);
+```
+````
+
+"
+
+"建议添加错误处理，防止 API 调用失败时应用崩溃。"
+
+"这个函数逻辑较复杂，建议拆分为更小的函数并添加注释。"
+
+❌ 避免：
+"代码很烂"
+"重写这部分"
+"这不对"
+
+````
+
+## Git Hooks
+
+**Husky + lint-staged 配置：**
+```json
+// package.json
+{
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
+      "pre-push": "npm test"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml}": [
+      "prettier --write"
+    ]
+  }
+}
+````
+
+**自定义 Git Hooks：**
+
+```bash
+# .git/hooks/pre-commit
+#!/bin/sh
+
+# 检查是否有大文件
+files=$(git diff --cached --name-only)
+for file in $files; do
+  size=$(du -k "$file" | cut -f1)
+  if [ $size -gt 5000 ]; then
+    echo "Error: File $file is larger than 5MB"
+    exit 1
+  fi
+done
+
+# 运行测试
+npm test
+if [ $? -ne 0 ]; then
+  echo "Tests failed. Commit aborted."
+  exit 1
+fi
+
+exit 0
+```
+
+## .gitignore 最佳实践
+
+```gitignore
+# 依赖
+node_modules/
+vendor/
+.pnp
+.pnp.js
+
+# 构建输出
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 日志
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 缓存
+.cache/
+.parcel-cache/
+.eslintcache
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# OS
+Thumbs.db
+.DS_Store
+```
+
+## 常见场景
+
+**合并冲突解决：**
+
+```bash
+# 1. 更新本地分支
+git checkout feature/my-feature
+git fetch origin
+git merge origin/main
+
+# 2. 解决冲突
+# 编辑冲突文件，选择保留的内容
+
+# 3. 标记为已解决
+git add <conflicted-files>
+git commit -m "merge: resolve conflicts with main"
+
+# 4. 推送
+git push origin feature/my-feature
+```
+
+**修改最后一次提交：**
+
+```bash
+# 修改提交信息
+git commit --amend -m "feat: correct commit message"
+
+# 添加遗漏的文件
+git add forgotten-file.js
+git commit --amend --no-edit
+
+# ⚠️ 注意：只在未推送时使用
+# 如果已推送，需要强制推送（谨慎使用）
+git push --force-with-lease
+```
+
+**撤销提交：**
+
+```bash
+# 软撤销（保留更改）
+git reset --soft HEAD~1
+
+# 硬撤销（丢弃更改）
+git reset --hard HEAD~1
+
+# 安全撤销（创建新提交）
+git revert HEAD
+```
+
+**清理分支：**
+
+```bash
+# 查看已合并的分支
+git branch --merged main
+
+# 删除本地分支
+git branch -d feature/old-feature
+
+# 删除远程分支
+git push origin --delete feature/old-feature
+
+# 清理远程已删除的分支引用
+git fetch --prune
+```
+
+## 工具配置
+
+**推荐工具：**
+
+```json
+{
+  "devDependencies": {
+    "husky": "^8.0.0",
+    "lint-staged": "^13.0.0",
+    "@commitlint/cli": "^17.0.0",
+    "@commitlint/config-conventional": "^17.0.0",
+    "commitizen": "^4.3.0",
+    "cz-conventional-changelog": "^3.3.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}
+```
+
+## 常见问题
+
+**Q: 何时使用 rebase vs merge？**
+A: Feature 分支使用 rebase 保持线性历史，合并到主分支使用 merge 保留完整历史。
+
+**Q: 如何处理大型二进制文件？**
+A: 使用 Git LFS (Large File Storage)。
+
+## 扩展阅读
+
+- [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/)
+- [GitHub Flow](https://guides.github.com/introduction/flow/)
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Trunk Based Development](https://trunkbaseddevelopment.com/)

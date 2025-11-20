@@ -1,0 +1,290 @@
+---
+id: 206
+title: TypeScript + React + Tailwind CSS 组合最佳实践
+description: TypeScript、React 和 Tailwind CSS 组合使用时的特定集成模式和协同工作实践
+globs: ["**/*.tsx", "components/**/*", "tailwind.config.ts"]
+priority: high
+tags: [typescript, react, tailwindcss, combination, ui-components]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# TypeScript + React + Tailwind CSS 组合最佳实践
+
+## 适用场景
+
+本规则仅涵盖三个技术栈**组合使用时的特定集成模式**，不包含各单一技术栈的基础最佳实践。
+
+- TypeScript + React + Tailwind CSS 组件开发
+- 类型安全的样式系统集成
+- 组件变体和主题系统
+- 设计系统构建
+
+## 核心内容
+
+专注于三技术栈协同工作时的特定模式：
+
+- 类型安全的样式 props 设计
+- CVA 组件变体模式
+- cn 工具函数的类型定义
+- Tailwind 配置的 TypeScript 类型化
+
+## 关键原则
+
+- ✅ 组件 props 结合 Tailwind 变体的类型定义
+- ✅ 使用 CVA 创建类型安全的组件变体
+- ✅ 使用 cn 工具函数处理条件样式合并
+- ✅ Tailwind 配置文件使用 TypeScript
+- ✅ 类型化的主题和响应式 props
+
+## CN 工具函数的类型定义
+
+组合场景特有的样式合并工具函数：
+
+```typescript
+// lib/utils.ts
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+**使用场景：**
+
+- 合并 Tailwind 类名避免冲突
+- 处理条件样式
+- 支持 clsx 的所有输入类型
+
+## CVA 组件变体模式
+
+使用 class-variance-authority 创建类型安全的 Tailwind 组件变体：
+
+```tsx
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
+
+const buttonVariants = cva(
+  // 基础样式
+  "inline-flex items-center justify-center rounded-lg font-medium transition-colors",
+  {
+    variants: {
+      variant: {
+        primary: "bg-blue-600 text-white hover:bg-blue-700",
+        secondary: "bg-gray-200 text-gray-900 hover:bg-gray-300",
+        outline: "border-2 border-blue-600 text-blue-600 hover:bg-blue-50",
+      },
+      size: {
+        sm: "h-9 px-3 text-sm",
+        md: "h-10 px-4",
+        lg: "h-11 px-8 text-lg",
+      },
+    },
+    defaultVariants: {
+      variant: "primary",
+      size: "md",
+    },
+  }
+);
+
+// TypeScript 自动推断 props 类型
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}
+
+export function Button({ className, variant, size, ...props }: ButtonProps) {
+  return <button className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+}
+```
+
+**类型推断优势：**
+
+- 自动推断变体 props 类型
+- 编译时检查变体值
+- IDE 自动补全支持
+
+## 类型安全的响应式 Props
+
+结合 TypeScript 和 Tailwind 的响应式设计：
+
+```tsx
+type ResponsiveValue<T> =
+  | T
+  | {
+      sm?: T;
+      md?: T;
+      lg?: T;
+      xl?: T;
+    };
+
+interface GridProps {
+  cols?: ResponsiveValue<1 | 2 | 3 | 4 | 6 | 12>;
+  gap?: ResponsiveValue<number>;
+  children: React.ReactNode;
+}
+
+export function Grid({ cols = 1, gap = 4, children }: GridProps) {
+  const getColsClass = (value: typeof cols) => {
+    if (typeof value === "object") {
+      return cn(
+        value.sm && `sm:grid-cols-${value.sm}`,
+        value.md && `md:grid-cols-${value.md}`,
+        value.lg && `lg:grid-cols-${value.lg}`,
+        value.xl && `xl:grid-cols-${value.xl}`
+      );
+    }
+    return `grid-cols-${value}`;
+  };
+
+  return <div className={cn("grid", getColsClass(cols), `gap-${gap}`)}>{children}</div>;
+}
+
+// 使用示例
+<Grid cols={{ sm: 1, md: 2, lg: 3 }} gap={4}>
+  {/* content */}
+</Grid>;
+```
+
+## Tailwind Config 的 TypeScript 类型化
+
+```typescript
+// tailwind.config.ts
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: "#eff6ff",
+          500: "#3b82f6",
+          900: "#1e3a8a",
+        },
+      },
+    },
+  },
+};
+
+export default config;
+```
+
+**自定义主题类型：**
+
+```typescript
+// types/theme.ts
+export type ThemeColors = {
+  primary: string;
+  secondary: string;
+  accent: string;
+};
+
+export type ThemeConfig = {
+  colors: ThemeColors;
+  spacing: Record<string, string>;
+};
+```
+
+## 表单组件的类型集成
+
+结合 React Hook Form 类型和 Tailwind 样式：
+
+```tsx
+import { forwardRef } from "react";
+import { type FieldError } from "react-hook-form";
+import { cn } from "@/lib/utils";
+
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: FieldError;
+}
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, className, ...props }, ref) => {
+  return (
+    <div className="space-y-2">
+      {label && <label className="text-sm font-medium text-gray-700">{label}</label>}
+      <input
+        ref={ref}
+        className={cn(
+          "w-full px-3 py-2 border rounded-lg",
+          "focus:outline-none focus:ring-2 focus:ring-blue-500",
+          error && "border-red-500 focus:ring-red-500",
+          className
+        )}
+        {...props}
+      />
+      {error && <p className="text-sm text-red-600">{error.message}</p>}
+    </div>
+  );
+});
+
+Input.displayName = "Input";
+```
+
+## 暗色模式的类型安全实现
+
+```tsx
+import { createContext, useContext, useState, type ReactNode } from "react";
+
+type Theme = "light" | "dark" | "system";
+
+interface ThemeContextType {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>("system");
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      <div className={theme === "dark" ? "dark" : ""}>{children}</div>
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error("useTheme must be used within ThemeProvider");
+  }
+  return context;
+}
+```
+
+## 组合场景的工具依赖
+
+**必需的组合特定依赖：**
+
+```json
+{
+  "dependencies": {
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0",
+    "class-variance-authority": "^0.7.0"
+  }
+}
+```
+
+## 常见集成问题
+
+**Q: 如何避免 Tailwind 类名冲突？**
+A: 使用 tailwind-merge 和 clsx 组合的 cn 函数。
+
+**Q: 如何确保组件变体的类型安全？**
+A: 使用 CVA 配合 VariantProps 进行类型推断。
+
+**Q: 响应式 props 如何类型化？**
+A: 定义 ResponsiveValue 泛型类型，支持单值或对象形式。
+
+## 扩展阅读
+
+- [class-variance-authority 文档](https://cva.style/docs)
+- [Tailwind Merge 文档](https://github.com/dcastil/tailwind-merge)
+- [shadcn/ui 源码](https://github.com/shadcn-ui/ui) - 最佳实践参考

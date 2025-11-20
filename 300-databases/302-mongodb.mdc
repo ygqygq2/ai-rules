@@ -1,0 +1,422 @@
+---
+id: 302
+title: MongoDB 最佳实践
+description: MongoDB 文档数据库设计、查询优化和性能调优的最佳实践
+globs: ["**/*.mongodb.js", "**/*.mongodb.ts", "models/**/*"]
+priority: medium
+tags: [mongodb, nosql, database, performance, mongoose]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# MongoDB 最佳实践
+
+## 适用场景
+
+- MongoDB 6+ 数据库开发
+- 文档型数据库设计
+- NoSQL 数据建模
+- Mongoose ODM 使用
+- 聚合查询优化
+
+## 核心内容
+
+MongoDB 开发的核心最佳实践，涵盖文档设计、索引策略、查询优化、聚合管道和性能监控等方面。
+
+## 关键原则
+
+- ✅ 根据查询模式设计文档结构
+- ✅ 嵌入 vs 引用的权衡选择
+- ✅ 为常用查询字段创建索引
+- ✅ 使用聚合管道处理复杂查询
+- ✅ 限制文档大小（< 16MB）
+- ✅ 使用投影减少数据传输
+
+## 文档设计
+
+- 根据访问模式设计文档
+- 一对少：使用嵌入
+- 一对多：根据情况选择嵌入或引用
+- 多对多：使用引用
+- 避免深层嵌套
+- 限制数组大小
+
+**文档设计示例：**
+
+```javascript
+// ✅ 嵌入式设计（一对少）
+{
+  _id: ObjectId("..."),
+  username: "john_doe",
+  email: "john@example.com",
+  profile: {
+    firstName: "John",
+    lastName: "Doe",
+    age: 30,
+    address: {
+      street: "123 Main St",
+      city: "New York",
+      country: "USA"
+    }
+  },
+  createdAt: ISODate("2025-01-01T00:00:00Z")
+}
+
+// ✅ 引用设计（一对多）
+// User 文档
+{
+  _id: ObjectId("user1"),
+  username: "john_doe",
+  email: "john@example.com"
+}
+
+// Post 文档
+{
+  _id: ObjectId("post1"),
+  title: "My First Post",
+  content: "...",
+  authorId: ObjectId("user1"),
+  createdAt: ISODate("2025-01-01T00:00:00Z")
+}
+```
+
+## 索引策略
+
+- 为常用查询字段创建索引
+- 使用复合索引优化多字段查询
+- 避免过多索引影响写入性能
+- 使用唯一索引确保数据唯一性
+- 使用 TTL 索引自动删除过期数据
+- 定期监控索引使用情况
+
+**索引示例：**
+
+```javascript
+// 单字段索引
+db.users.createIndex({ email: 1 });
+
+// 复合索引
+db.posts.createIndex({ authorId: 1, createdAt: -1 });
+
+// 唯一索引
+db.users.createIndex({ username: 1 }, { unique: true });
+
+// 文本索引（全文搜索）
+db.posts.createIndex({ title: "text", content: "text" });
+
+// TTL 索引（自动删除）
+db.sessions.createIndex(
+  { createdAt: 1 },
+  { expireAfterSeconds: 3600 } // 1小时后删除
+);
+
+// 部分索引
+db.users.createIndex({ email: 1 }, { partialFilterExpression: { isActive: true } });
+```
+
+## 查询优化
+
+- 使用投影只返回需要的字段
+- 使用 limit() 限制返回数量
+- 使用 explain() 分析查询性能
+- 避免扫描整个集合
+- 使用批量操作提高效率
+- 合理使用 skip() 和 limit()
+
+**查询优化示例：**
+
+```javascript
+// ❌ 避免
+db.users.find({}); // 返回所有字段
+
+// ✅ 推荐 - 使用投影
+db.users.find({ isActive: true }, { username: 1, email: 1, _id: 0 }).limit(10);
+
+// ✅ 使用索引过滤
+db.posts
+  .find({ authorId: ObjectId("...") })
+  .sort({ createdAt: -1 })
+  .limit(20);
+
+// ✅ 批量操作
+db.users.bulkWrite([
+  { insertOne: { document: { username: "user1" } } },
+  { updateOne: { filter: { _id: 1 }, update: { $set: { active: true } } } },
+  { deleteOne: { filter: { _id: 2 } } },
+]);
+
+// 分析查询性能
+db.posts.find({ authorId: ObjectId("...") }).explain("executionStats");
+```
+
+## 聚合管道
+
+- 使用聚合管道处理复杂查询
+- 尽早过滤数据（$match）
+- 尽早限制字段（$project）
+- 使用索引优化聚合
+- 合理使用 $lookup 连接
+- 避免过多的阶段
+
+**聚合示例：**
+
+```javascript
+// 统计每个用户的文章数
+db.posts.aggregate([
+  // 尽早过滤
+  { $match: { status: "published" } },
+
+  // 分组统计
+  {
+    $group: {
+      _id: "$authorId",
+      postCount: { $sum: 1 },
+      avgViews: { $avg: "$views" },
+    },
+  },
+
+  // 关联用户信息
+  {
+    $lookup: {
+      from: "users",
+      localField: "_id",
+      foreignField: "_id",
+      as: "author",
+    },
+  },
+
+  // 展开数组
+  { $unwind: "$author" },
+
+  // 投影输出
+  {
+    $project: {
+      username: "$author.username",
+      postCount: 1,
+      avgViews: 1,
+    },
+  },
+
+  // 排序
+  { $sort: { postCount: -1 } },
+
+  // 限制数量
+  { $limit: 10 },
+]);
+```
+
+## Mongoose Schema 设计
+
+- 定义清晰的 Schema
+- 使用适当的验证器
+- 定义虚拟属性
+- 使用中间件处理逻辑
+- 定义实例和静态方法
+- 使用 populate 处理引用
+
+**Mongoose 示例：**
+
+```javascript
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
+
+const userSchema = new Schema(
+  {
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 30,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    },
+    passwordHash: {
+      type: String,
+      required: true,
+    },
+    profile: {
+      firstName: String,
+      lastName: String,
+      age: {
+        type: Number,
+        min: 0,
+        max: 120,
+      },
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true, // 自动添加 createdAt 和 updatedAt
+  }
+);
+
+// 虚拟属性
+userSchema.virtual("fullName").get(function () {
+  return `${this.profile.firstName} ${this.profile.lastName}`;
+});
+
+// 索引
+userSchema.index({ email: 1 });
+userSchema.index({ "profile.firstName": 1, "profile.lastName": 1 });
+
+// 中间件
+userSchema.pre("save", async function (next) {
+  if (this.isModified("passwordHash")) {
+    // 密码哈希处理
+  }
+  next();
+});
+
+// 实例方法
+userSchema.methods.toJSON = function () {
+  const obj = this.toObject();
+  delete obj.passwordHash;
+  return obj;
+};
+
+// 静态方法
+userSchema.statics.findByEmail = function (email) {
+  return this.findOne({ email: email.toLowerCase() });
+};
+
+const User = mongoose.model("User", userSchema);
+```
+
+## 事务处理
+
+- 使用事务确保多文档操作的一致性
+- 保持事务简短
+- 使用副本集支持事务
+- 处理事务失败和重试
+- 避免长时间运行的事务
+
+**事务示例：**
+
+```javascript
+const session = await mongoose.startSession();
+session.startTransaction();
+
+try {
+  // 转账操作
+  await Account.findByIdAndUpdate(fromAccountId, { $inc: { balance: -amount } }, { session });
+
+  await Account.findByIdAndUpdate(toAccountId, { $inc: { balance: amount } }, { session });
+
+  // 记录交易
+  await Transaction.create(
+    [
+      {
+        from: fromAccountId,
+        to: toAccountId,
+        amount: amount,
+      },
+    ],
+    { session }
+  );
+
+  await session.commitTransaction();
+} catch (error) {
+  await session.abortTransaction();
+  throw error;
+} finally {
+  session.endSession();
+}
+```
+
+## 性能优化
+
+- 使用连接池
+- 启用查询日志分析慢查询
+- 使用覆盖索引
+- 避免大文档和深层嵌套
+- 使用批量操作
+- 监控数据库指标
+
+**性能监控：**
+
+```javascript
+// 启用慢查询日志
+db.setProfilingLevel(1, { slowms: 100 });
+
+// 查看慢查询
+db.system.profile
+  .find({ millis: { $gt: 100 } })
+  .sort({ ts: -1 })
+  .limit(10);
+
+// 查看索引统计
+db.posts.aggregate([{ $indexStats: {} }]);
+
+// 查看集合统计
+db.posts.stats();
+```
+
+## 数据备份
+
+- 定期备份数据
+- 使用 mongodump 导出数据
+- 配置副本集实现高可用
+- 测试恢复流程
+- 监控备份任务
+
+**备份命令：**
+
+```bash
+# 备份整个数据库
+mongodump --uri="mongodb://localhost:27017/mydb" --out=/backup
+
+# 备份特定集合
+mongodump --uri="mongodb://localhost:27017/mydb" --collection=users --out=/backup
+
+# 恢复数据库
+mongorestore --uri="mongodb://localhost:27017/mydb" /backup/mydb
+```
+
+## 工具配置
+
+**推荐版本和工具：**
+
+- MongoDB 6+
+- Mongoose 7+
+- MongoDB Compass（图形化工具）
+- MongoDB Atlas（云服务）
+
+**连接配置：**
+
+```javascript
+const mongoose = require("mongoose");
+
+mongoose.connect("mongodb://localhost:27017/mydb", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  maxPoolSize: 10, // 连接池大小
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+});
+```
+
+## 常见问题
+
+**Q: 何时使用嵌入，何时使用引用？**
+A: 一对少使用嵌入，一对多看更新频率，多对多使用引用。
+
+**Q: 如何优化聚合查询？**
+A: 尽早过滤（$match）和投影（$project），使用索引。
+
+## 扩展阅读
+
+- [MongoDB 官方文档](https://www.mongodb.com/docs/)
+- [Mongoose 文档](https://mongoosejs.com/docs/)
+- [MongoDB University](https://university.mongodb.com/)
+- [MongoDB Performance Best Practices](https://www.mongodb.com/docs/manual/administration/analyzing-mongodb-performance/)

@@ -1,0 +1,666 @@
+---
+id: 901
+title: 微服务架构最佳实践
+description: 微服务架构设计、实现和治理的最佳实践
+globs: ["**/services/**/*", "**/microservices/**/*", "**/*service*.js", "**/*service*.ts"]
+priority: medium
+tags: [microservices, architecture, distributed-systems, api-gateway, service-mesh]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# 微服务架构最佳实践
+
+## 适用场景
+
+- 微服务架构设计
+- 分布式系统开发
+- 服务拆分和组织
+- 服务间通信
+- 微服务治理
+- 云原生应用
+
+## 核心内容
+
+微服务架构的核心最佳实践，涵盖服务拆分、通信模式、数据管理、服务发现、容错处理等方面。
+
+## 关键原则
+
+- ✅ 单一职责原则
+- ✅ 服务自治和独立部署
+- ✅ 去中心化数据管理
+- ✅ 面向失败设计
+- ✅ 可观测性优先
+- ✅ API 优先设计
+- ✅ 自动化优先
+
+## 服务拆分
+
+- 按业务能力拆分
+- 按领域驱动设计（DDD）
+- 保持服务独立性
+- 避免过度拆分
+- 考虑团队规模
+- 明确服务边界
+
+**服务拆分示例：**
+
+```
+电商系统微服务拆分：
+
+✅ 合理拆分
+- 用户服务（User Service）
+- 商品服务（Product Service）
+- 订单服务（Order Service）
+- 支付服务（Payment Service）
+- 库存服务（Inventory Service）
+- 通知服务（Notification Service）
+
+❌ 过度拆分
+- 用户基本信息服务
+- 用户地址服务
+- 用户偏好服务
+（这些应该合并为一个用户服务）
+```
+
+## 服务间通信
+
+- 使用 REST 或 gRPC
+- 异步消息队列（事件驱动）
+- 同步调用保持简单
+- 使用 API 网关
+- 实施服务网格（Service Mesh）
+- 定义清晰的接口契约
+
+**同步通信示例：**
+
+```javascript
+// REST API 调用
+const axios = require("axios");
+
+class ProductService {
+  async getProduct(productId) {
+    try {
+      const response = await axios.get(`http://product-service/api/products/${productId}`, { timeout: 3000 });
+      return response.data;
+    } catch (error) {
+      // 熔断、降级处理
+      return this.getFallbackProduct(productId);
+    }
+  }
+}
+
+// gRPC 调用
+const grpc = require("@grpc/grpc-js");
+const protoLoader = require("@grpc/proto-loader");
+
+const packageDefinition = protoLoader.loadSync("product.proto");
+const productProto = grpc.loadPackageDefinition(packageDefinition);
+
+const client = new productProto.ProductService("product-service:50051", grpc.credentials.createInsecure());
+
+client.getProduct({ id: "123" }, (error, response) => {
+  if (error) {
+    console.error(error);
+  } else {
+    console.log(response);
+  }
+});
+```
+
+**异步通信示例：**
+
+```javascript
+// 事件发布（使用 RabbitMQ）
+const amqp = require("amqplib");
+
+class OrderService {
+  async createOrder(orderData) {
+    const order = await Order.create(orderData);
+
+    // 发布订单创建事件
+    await this.publishEvent("order.created", {
+      orderId: order.id,
+      userId: order.userId,
+      totalAmount: order.totalAmount,
+      items: order.items,
+    });
+
+    return order;
+  }
+
+  async publishEvent(eventType, data) {
+    const connection = await amqp.connect("amqp://localhost");
+    const channel = await connection.createChannel();
+
+    await channel.assertExchange("events", "topic", { durable: true });
+
+    channel.publish("events", eventType, Buffer.from(JSON.stringify(data)), { persistent: true });
+
+    await channel.close();
+    await connection.close();
+  }
+}
+
+// 事件订阅
+class InventoryService {
+  async subscribeToEvents() {
+    const connection = await amqp.connect("amqp://localhost");
+    const channel = await connection.createChannel();
+
+    await channel.assertExchange("events", "topic", { durable: true });
+    const queue = await channel.assertQueue("", { exclusive: true });
+
+    await channel.bindQueue(queue.queue, "events", "order.created");
+
+    channel.consume(queue.queue, async (msg) => {
+      const event = JSON.parse(msg.content.toString());
+      await this.handleOrderCreated(event);
+      channel.ack(msg);
+    });
+  }
+
+  async handleOrderCreated(event) {
+    // 减少库存
+    for (const item of event.items) {
+      await this.decreaseStock(item.productId, item.quantity);
+    }
+  }
+}
+```
+
+## 数据管理
+
+- 每个服务独立数据库
+- 避免共享数据库
+- 使用 Saga 模式处理分布式事务
+- 实现最终一致性
+- 使用事件溯源（Event Sourcing）
+- CQRS 模式分离读写
+
+**Saga 模式示例：**
+
+```javascript
+// 编排式 Saga（Orchestration）
+class OrderSaga {
+  async createOrder(orderData) {
+    const sagaId = generateId();
+
+    try {
+      // 1. 创建订单
+      const order = await orderService.create(orderData);
+
+      // 2. 预留库存
+      await inventoryService.reserve(order.items, sagaId);
+
+      // 3. 处理支付
+      const payment = await paymentService.charge(order.totalAmount, sagaId);
+
+      // 4. 确认订单
+      await orderService.confirm(order.id);
+
+      return order;
+    } catch (error) {
+      // 补偿事务
+      await this.compensate(sagaId);
+      throw error;
+    }
+  }
+
+  async compensate(sagaId) {
+    try {
+      await paymentService.refund(sagaId);
+    } catch (e) {}
+
+    try {
+      await inventoryService.release(sagaId);
+    } catch (e) {}
+
+    try {
+      await orderService.cancel(sagaId);
+    } catch (e) {}
+  }
+}
+```
+
+## 服务发现
+
+- 使用服务注册中心（Consul、Eureka）
+- 客户端发现 vs 服务端发现
+- 健康检查机制
+- 动态服务配置
+- 负载均衡
+- 服务路由
+
+**服务发现示例（Consul）：**
+
+```javascript
+const Consul = require("consul");
+
+class ServiceRegistry {
+  constructor() {
+    this.consul = new Consul({
+      host: "consul-server",
+      port: 8500,
+    });
+  }
+
+  // 注册服务
+  async register(serviceName, port) {
+    await this.consul.agent.service.register({
+      name: serviceName,
+      id: `${serviceName}-${process.env.HOSTNAME}`,
+      address: process.env.HOST_IP,
+      port: port,
+      check: {
+        http: `http://${process.env.HOST_IP}:${port}/health`,
+        interval: "10s",
+        timeout: "5s",
+      },
+    });
+  }
+
+  // 发现服务
+  async discover(serviceName) {
+    const result = await this.consul.health.service({
+      service: serviceName,
+      passing: true,
+    });
+
+    // 随机选择一个健康的实例
+    const services = result.map((r) => r.Service);
+    return services[Math.floor(Math.random() * services.length)];
+  }
+
+  // 注销服务
+  async deregister(serviceId) {
+    await this.consul.agent.service.deregister(serviceId);
+  }
+}
+```
+
+## API 网关
+
+- 统一入口点
+- 路由和负载均衡
+- 认证和授权
+- 请求聚合
+- 协议转换
+- 限流和熔断
+
+**API 网关示例（Express Gateway）：**
+
+```yaml
+# gateway.config.yml
+apiEndpoints:
+  users:
+    host: "*"
+    paths: "/api/users/*"
+  products:
+    host: "*"
+    paths: "/api/products/*"
+
+serviceEndpoints:
+  userService:
+    url: "http://user-service:3001"
+  productService:
+    url: "http://product-service:3002"
+
+policies:
+  - basic-auth
+  - cors
+  - expression
+  - key-auth
+  - rate-limit
+  - request-transformer
+  - response-transformer
+
+pipelines:
+  userPipeline:
+    apiEndpoints:
+      - users
+    policies:
+      - key-auth:
+      - rate-limit:
+          - action:
+              max: 100
+              windowMs: 60000
+      - request-transformer:
+      - proxy:
+          - action:
+              serviceEndpoint: userService
+
+  productPipeline:
+    apiEndpoints:
+      - products
+    policies:
+      - proxy:
+          - action:
+              serviceEndpoint: productService
+```
+
+## 容错和弹性
+
+- 实施熔断器（Circuit Breaker）
+- 服务降级
+- 超时控制
+- 重试机制
+- 限流
+- 隔离（Bulkhead）
+
+**熔断器示例：**
+
+```javascript
+const CircuitBreaker = require("opossum");
+
+class ProductService {
+  constructor() {
+    // 配置熔断器
+    const options = {
+      timeout: 3000, // 超时时间
+      errorThresholdPercentage: 50, // 错误阈值
+      resetTimeout: 30000, // 恢复时间
+    };
+
+    this.breaker = new CircuitBreaker(this.fetchProduct.bind(this), options);
+
+    // 熔断时降级处理
+    this.breaker.fallback(() => this.getFallbackProduct());
+
+    // 事件监听
+    this.breaker.on("open", () => {
+      console.log("Circuit breaker opened");
+    });
+
+    this.breaker.on("halfOpen", () => {
+      console.log("Circuit breaker half-open");
+    });
+  }
+
+  async getProduct(productId) {
+    return await this.breaker.fire(productId);
+  }
+
+  async fetchProduct(productId) {
+    const response = await axios.get(`http://product-service/api/products/${productId}`);
+    return response.data;
+  }
+
+  getFallbackProduct() {
+    return {
+      id: null,
+      name: "Product temporarily unavailable",
+      price: 0,
+    };
+  }
+}
+```
+
+## 可观测性
+
+- 集中日志管理（ELK）
+- 分布式追踪（Jaeger、Zipkin）
+- 指标监控（Prometheus、Grafana）
+- 健康检查端点
+- 告警机制
+- 服务依赖可视化
+
+**分布式追踪示例：**
+
+```javascript
+const { initTracer } = require("jaeger-client");
+
+// 初始化追踪器
+const config = {
+  serviceName: "order-service",
+  sampler: {
+    type: "const",
+    param: 1,
+  },
+  reporter: {
+    logSpans: true,
+    agentHost: "jaeger-agent",
+    agentPort: 6832,
+  },
+};
+
+const tracer = initTracer(config);
+
+// 使用追踪
+app.get("/api/orders/:id", async (req, res) => {
+  const span = tracer.startSpan("get_order");
+  span.setTag("orderId", req.params.id);
+
+  try {
+    const order = await Order.findById(req.params.id);
+
+    // 调用其他服务时传递追踪上下文
+    const productSpan = tracer.startSpan("fetch_product", {
+      childOf: span,
+    });
+
+    const product = await productService.getProduct(order.productId, productSpan);
+
+    productSpan.finish();
+
+    res.json({ order, product });
+  } catch (error) {
+    span.setTag("error", true);
+    span.log({ event: "error", message: error.message });
+    res.status(500).json({ error: error.message });
+  } finally {
+    span.finish();
+  }
+});
+```
+
+## 配置管理
+
+- 外部化配置
+- 环境特定配置
+- 动态配置更新
+- 配置版本控制
+- 秘密管理
+- 使用配置中心（Consul、Spring Cloud Config）
+
+**配置管理示例：**
+
+```javascript
+const consul = require("consul")();
+
+class ConfigService {
+  async getConfig(key) {
+    const result = await consul.kv.get(key);
+    return result ? JSON.parse(result.Value) : null;
+  }
+
+  async setConfig(key, value) {
+    await consul.kv.set(key, JSON.stringify(value));
+  }
+
+  // 监听配置变化
+  watchConfig(key, callback) {
+    const watcher = consul.watch({
+      method: consul.kv.get,
+      options: { key },
+    });
+
+    watcher.on("change", (data) => {
+      const value = data ? JSON.parse(data.Value) : null;
+      callback(value);
+    });
+
+    watcher.on("error", (err) => {
+      console.error("Watch error:", err);
+    });
+
+    return watcher;
+  }
+}
+```
+
+## 安全实践
+
+- 服务间认证（mTLS）
+- API 网关认证
+- 最小权限原则
+- 加密敏感数据
+- 安全通信
+- 审计日志
+
+**服务间认证示例：**
+
+```javascript
+// JWT 服务间认证
+const jwt = require("jsonwebtoken");
+
+class ServiceAuth {
+  // 生成服务令牌
+  generateServiceToken(serviceName) {
+    return jwt.sign(
+      {
+        service: serviceName,
+        iat: Date.now(),
+      },
+      process.env.SERVICE_SECRET,
+      { expiresIn: "1h" }
+    );
+  }
+
+  // 验证服务令牌
+  verifyServiceToken(req, res, next) {
+    const token = req.headers["x-service-token"];
+
+    if (!token) {
+      return res.status(401).json({ error: "No service token" });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.SERVICE_SECRET);
+      req.serviceAuth = decoded;
+      next();
+    } catch (error) {
+      res.status(401).json({ error: "Invalid service token" });
+    }
+  }
+}
+
+// 使用
+app.get("/internal/api/data", serviceAuth.verifyServiceToken, getData);
+```
+
+## 部署策略
+
+- 容器化部署（Docker）
+- 编排工具（Kubernetes）
+- 蓝绿部署
+- 金丝雀发布
+- 滚动更新
+- 自动扩缩容
+
+**Kubernetes 部署示例：**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+        - name: product-service
+          image: myregistry/product-service:v1.0.0
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: url
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+spec:
+  selector:
+    app: product-service
+  ports:
+    - port: 80
+      targetPort: 3000
+  type: LoadBalancer
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: product-service-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: product-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+```
+
+## 工具配置
+
+**推荐工具：**
+
+- Kubernetes（容器编排）
+- Consul/Eureka（服务发现）
+- Kong/Nginx（API 网关）
+- Prometheus + Grafana（监控）
+- ELK Stack（日志）
+- Jaeger/Zipkin（追踪）
+
+## 常见问题
+
+**Q: 如何拆分单体应用为微服务？**
+A: 按业务能力逐步拆分，使用 Strangler Fig 模式。
+
+**Q: 如何处理分布式事务？**
+A: 使用 Saga 模式或事件溯源实现最终一致性。
+
+## 扩展阅读
+
+- [Microservices Patterns](https://microservices.io/patterns/)
+- [Building Microservices - Sam Newman](https://samnewman.io/books/building_microservices/)
+- [Kubernetes 官方文档](https://kubernetes.io/docs/)
+- [The Twelve-Factor App](https://12factor.net/)

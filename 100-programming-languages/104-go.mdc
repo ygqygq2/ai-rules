@@ -1,0 +1,229 @@
+---
+id: 104
+title: Go 最佳实践
+description: Go 1.21+ 现代应用开发的最佳实践和惯用模式
+globs: ["**/*.go"]
+priority: medium
+tags: [go, golang, backend, concurrency, microservices]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# Go 最佳实践
+
+## 适用场景
+
+- Go 1.21+ 应用开发
+- 后端服务开发
+- 微服务架构
+- 命令行工具
+- 并发编程
+- 云原生应用
+
+## 核心内容
+
+Go 开发的核心最佳实践，涵盖项目结构、代码风格、并发编程、错误处理、性能优化等方面。
+
+## 关键原则
+
+- ✅ 遵循标准项目布局
+- ✅ 使用 gofmt 格式化代码
+- ✅ 优先使用接口而非具体类型
+- ✅ 显式错误处理，避免 panic
+- ✅ 使用 goroutine 和 channel 进行并发
+- ✅ 保持代码简单和可读
+
+## 项目结构
+
+标准 Go 项目布局：
+
+```
+project/
+├── cmd/              # 主应用入口
+│   └── myapp/
+│       └── main.go
+├── internal/         # 私有代码
+│   ├── handler/
+│   ├── service/
+│   └── repository/
+├── pkg/              # 公共库代码
+├── api/              # API 定义
+├── configs/          # 配置文件
+├── scripts/          # 构建脚本
+├── go.mod
+└── go.sum
+```
+
+## 命名规范
+
+- 包名使用小写单词，避免下划线
+- 导出的标识符使用 PascalCase
+- 未导出的标识符使用 camelCase
+- 接口名使用 -er 后缀（Reader, Writer）
+- 使用简短但有意义的变量名
+- 避免冗余的命名（不要 userUser）
+
+## 代码风格
+
+- 使用 gofmt 格式化代码
+- 使用 golangci-lint 进行代码检查
+- 每个文件保持单一职责
+- 函数保持简短（通常 < 50 行）
+- 避免深层嵌套
+- 添加适当的注释
+
+## 错误处理
+
+- 始终检查错误
+- 使用 errors.New() 创建错误
+- 使用 fmt.Errorf() 包装错误
+- 使用 errors.Is() 和 errors.As() 检查错误
+- 避免使用 panic（除非不可恢复）
+- 在公共 API 中返回错误
+
+**错误处理示例：**
+
+```go
+func processData(data []byte) error {
+    if len(data) == 0 {
+        return errors.New("data is empty")
+    }
+
+    if err := validate(data); err != nil {
+        return fmt.Errorf("validation failed: %w", err)
+    }
+
+    return nil
+}
+```
+
+## 并发编程
+
+- 使用 goroutine 处理并发任务
+- 使用 channel 进行通信
+- 避免共享内存，使用通信共享
+- 使用 sync.WaitGroup 等待 goroutine
+- 使用 context 管理生命周期
+- 避免 goroutine 泄漏
+
+**并发示例：**
+
+```go
+func process(ctx context.Context, items []Item) error {
+    var wg sync.WaitGroup
+    errChan := make(chan error, len(items))
+
+    for _, item := range items {
+        wg.Add(1)
+        go func(i Item) {
+            defer wg.Done()
+            if err := processItem(ctx, i); err != nil {
+                errChan <- err
+            }
+        }(item)
+    }
+
+    wg.Wait()
+    close(errChan)
+
+    return <-errChan
+}
+```
+
+## 接口设计
+
+- 优先定义小接口
+- 接受接口，返回具体类型
+- 在使用处定义接口
+- 避免不必要的接口
+- 使用标准库接口（io.Reader 等）
+- 保持接口简单和专注
+
+## 测试策略
+
+- 为所有公共函数编写测试
+- 使用表驱动测试
+- 使用 testify 等测试库
+- 实施基准测试
+- 使用 test coverage 工具
+- 编写示例测试
+
+**测试示例：**
+
+```go
+func TestProcessData(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   []byte
+        wantErr bool
+    }{
+        {"valid data", []byte("data"), false},
+        {"empty data", []byte{}, true},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            err := processData(tt.input)
+            if (err != nil) != tt.wantErr {
+                t.Errorf("processData() error = %v, wantErr %v", err, tt.wantErr)
+            }
+        })
+    }
+}
+```
+
+## 性能优化
+
+- 使用 sync.Pool 复用对象
+- 避免不必要的内存分配
+- 使用 string builder 构建字符串
+- 使用 pprof 进行性能分析
+- 避免过早优化
+- 使用基准测试验证优化
+
+## 依赖管理
+
+- 使用 go modules 管理依赖
+- 保持依赖最小化
+- 定期更新依赖
+- 使用 go mod tidy 清理依赖
+- 使用 go mod vendor 固化依赖
+- 检查依赖的安全漏洞
+
+## 工具配置
+
+**推荐版本和配置：**
+
+- Go 1.21+
+- golangci-lint 1.55+
+- gofmt
+- goimports
+
+**golangci-lint 配置示例：**
+
+```yaml
+linters:
+  enable:
+    - gofmt
+    - golint
+    - govet
+    - errcheck
+    - staticcheck
+    - ineffassign
+```
+
+## 常见问题
+
+**Q: 何时使用指针？**
+A: 需要修改原值、大型结构体或实现接口时使用指针。
+
+**Q: 如何避免 goroutine 泄漏？**
+A: 使用 context 控制生命周期，确保 goroutine 正常退出。
+
+## 扩展阅读
+
+- [Effective Go](https://go.dev/doc/effective_go)
+- [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+- [Standard Go Project Layout](https://github.com/golang-standards/project-layout)
+- [Go 语言设计与实现](https://draveness.me/golang/)

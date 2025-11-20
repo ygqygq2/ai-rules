@@ -1,0 +1,423 @@
+---
+id: 501
+title: RESTful API 最佳实践
+description: RESTful API 设计、实现和文档化的最佳实践
+globs: ["**/routes/**/*", "**/controllers/**/*", "**/api/**/*"]
+priority: medium
+tags: [rest, api, http, web-services, api-design]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# RESTful API 最佳实践
+
+## 适用场景
+
+- RESTful API 设计和开发
+- HTTP API 接口设计
+- Web 服务开发
+- 微服务 API
+- 移动应用后端 API
+
+## 核心内容
+
+RESTful API 设计的核心最佳实践，涵盖资源命名、HTTP 方法使用、状态码选择、错误处理和版本管理等方面。
+
+## 关键原则
+
+- ✅ 使用名词表示资源，动词表示操作
+- ✅ 使用复数形式命名资源
+- ✅ 使用正确的 HTTP 方法
+- ✅ 返回适当的 HTTP 状态码
+- ✅ 使用一致的错误响应格式
+- ✅ 实施 API 版本控制
+
+## URL 设计
+
+- 使用小写字母和连字符
+- 使用名词表示资源
+- 使用复数形式
+- 避免深层嵌套
+- 使用查询参数过滤和排序
+- 保持 URL 简洁和语义化
+
+**URL 设计示例：**
+
+```
+✅ 推荐
+GET    /api/v1/users              # 获取用户列表
+GET    /api/v1/users/123          # 获取特定用户
+POST   /api/v1/users              # 创建用户
+PUT    /api/v1/users/123          # 更新用户
+DELETE /api/v1/users/123          # 删除用户
+GET    /api/v1/users/123/posts    # 获取用户的文章
+
+❌ 避免
+GET    /api/v1/getUsers
+POST   /api/v1/createUser
+GET    /api/v1/user/123
+GET    /api/v1/users/123/posts/comments/likes  # 过深嵌套
+```
+
+## HTTP 方法
+
+- GET：获取资源
+- POST：创建资源
+- PUT：完整更新资源
+- PATCH：部分更新资源
+- DELETE：删除资源
+- HEAD：获取资源元数据
+- OPTIONS：获取资源支持的方法
+
+**HTTP 方法示例：**
+
+```javascript
+// GET - 幂等、安全
+app.get('/api/v1/users', (req, res) => {
+  const users = await User.find();
+  res.json({ data: users });
+});
+
+// POST - 非幂等
+app.post('/api/v1/users', (req, res) => {
+  const user = await User.create(req.body);
+  res.status(201).json({ data: user });
+});
+
+// PUT - 幂等、完整更新
+app.put('/api/v1/users/:id', (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    { new: true, overwrite: true }
+  );
+  res.json({ data: user });
+});
+
+// PATCH - 幂等、部分更新
+app.patch('/api/v1/users/:id', (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { $set: req.body },
+    { new: true }
+  );
+  res.json({ data: user });
+});
+
+// DELETE - 幂等
+app.delete('/api/v1/users/:id', (req, res) => {
+  await User.findByIdAndDelete(req.params.id);
+  res.status(204).send();
+});
+```
+
+## HTTP 状态码
+
+- 2xx：成功
+  - 200 OK：请求成功
+  - 201 Created：资源创建成功
+  - 204 No Content：成功但无返回内容
+- 3xx：重定向
+  - 301 Moved Permanently：永久重定向
+  - 304 Not Modified：资源未修改
+- 4xx：客户端错误
+  - 400 Bad Request：请求参数错误
+  - 401 Unauthorized：未认证
+  - 403 Forbidden：无权限
+  - 404 Not Found：资源不存在
+  - 409 Conflict：资源冲突
+  - 422 Unprocessable Entity：验证失败
+- 5xx：服务器错误
+  - 500 Internal Server Error：服务器错误
+  - 503 Service Unavailable：服务不可用
+
+## 响应格式
+
+- 使用一致的响应结构
+- 包含数据和元信息
+- 使用 data 字段包装数据
+- 错误响应包含错误详情
+- 使用 JSON 格式
+- 包含分页信息
+
+**响应格式示例：**
+
+```javascript
+// 成功响应
+{
+  "success": true,
+  "data": {
+    "id": "123",
+    "username": "john_doe",
+    "email": "john@example.com"
+  },
+  "meta": {
+    "timestamp": "2025-11-20T12:00:00Z"
+  }
+}
+
+// 列表响应（带分页）
+{
+  "success": true,
+  "data": [
+    { "id": "1", "username": "user1" },
+    { "id": "2", "username": "user2" }
+  ],
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 100,
+      "pages": 5
+    }
+  }
+}
+
+// 错误响应
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed",
+    "details": [
+      {
+        "field": "email",
+        "message": "Invalid email format"
+      }
+    ]
+  }
+}
+```
+
+## 查询参数
+
+- 使用查询参数过滤数据
+- 支持排序、分页和字段选择
+- 使用一致的参数命名
+- 验证查询参数
+- 提供默认值
+- 限制返回数量
+
+**查询参数示例：**
+
+```javascript
+// GET /api/v1/users?page=1&limit=20&sort=-createdAt&fields=username,email&status=active
+
+app.get("/api/v1/users", async (req, res) => {
+  const { page = 1, limit = 20, sort = "-createdAt", fields, status } = req.query;
+
+  const query = {};
+  if (status) query.status = status;
+
+  const users = await User.find(query)
+    .select(fields ? fields.replace(/,/g, " ") : "")
+    .sort(sort)
+    .limit(Number(limit))
+    .skip((Number(page) - 1) * Number(limit));
+
+  const total = await User.countDocuments(query);
+
+  res.json({
+    success: true,
+    data: users,
+    meta: {
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
+    },
+  });
+});
+```
+
+## 错误处理
+
+- 返回有意义的错误信息
+- 使用标准错误码
+- 包含错误详情
+- 记录错误日志
+- 不暴露敏感信息
+- 提供错误恢复建议
+
+**错误处理示例：**
+
+```javascript
+// 错误处理中间件
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+
+  if (err.name === "ValidationError") {
+    return res.status(422).json({
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Validation failed",
+        details: Object.values(err.errors).map((e) => ({
+          field: e.path,
+          message: e.message,
+        })),
+      },
+    });
+  }
+
+  if (err.name === "UnauthorizedError") {
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Authentication required",
+      },
+    });
+  }
+
+  res.status(500).json({
+    success: false,
+    error: {
+      code: "INTERNAL_ERROR",
+      message: "Internal server error",
+    },
+  });
+});
+```
+
+## 认证和授权
+
+- 使用 JWT 或 OAuth 2.0
+- 在 Authorization header 中传递令牌
+- 实施基于角色的访问控制
+- 保护敏感端点
+- 使用 HTTPS
+- 实施速率限制
+
+**认证示例：**
+
+```javascript
+// JWT 认证中间件
+const jwt = require("jsonwebtoken");
+
+const authenticate = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: "NO_TOKEN",
+        message: "Authentication token required",
+      },
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      error: {
+        code: "INVALID_TOKEN",
+        message: "Invalid or expired token",
+      },
+    });
+  }
+};
+
+// 使用认证中间件
+app.get("/api/v1/profile", authenticate, (req, res) => {
+  res.json({ data: req.user });
+});
+```
+
+## API 版本控制
+
+- 在 URL 中包含版本号
+- 使用语义化版本
+- 支持多个版本
+- 提供迁移指南
+- 废弃旧版本前提前通知
+- 使用 Accept header 版本控制（可选）
+
+**版本控制示例：**
+
+```javascript
+// URL 版本控制
+app.use("/api/v1", v1Routes);
+app.use("/api/v2", v2Routes);
+
+// Header 版本控制
+app.use((req, res, next) => {
+  const version = req.headers["api-version"] || "1";
+  req.apiVersion = version;
+  next();
+});
+```
+
+## API 文档
+
+- 使用 OpenAPI/Swagger 规范
+- 提供交互式 API 文档
+- 包含请求和响应示例
+- 说明认证要求
+- 列出所有状态码
+- 保持文档更新
+
+**OpenAPI 示例：**
+
+```yaml
+openapi: 3.0.0
+info:
+  title: User API
+  version: 1.0.0
+paths:
+  /api/v1/users:
+    get:
+      summary: Get all users
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+```
+
+## 工具配置
+
+**推荐工具：**
+
+- Express.js 或 Fastify（Node.js）
+- Swagger/OpenAPI 文档
+- Postman 或 Insomnia（API 测试）
+- Rate limiting（express-rate-limit）
+
+## 常见问题
+
+**Q: PUT 和 PATCH 有什么区别？**
+A: PUT 完整替换资源，PATCH 部分更新资源。
+
+**Q: 如何处理批量操作？**
+A: 使用 POST /api/v1/users/batch 或专门的批量端点。
+
+## 扩展阅读
+
+- [REST API 设计指南](https://restfulapi.net/)
+- [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines)
+- [OpenAPI Specification](https://swagger.io/specification/)
+- [HTTP Status Codes](https://httpstatuses.com/)

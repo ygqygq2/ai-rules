@@ -3,7 +3,7 @@ id: 102
 title: TypeScript 最佳实践
 description: TypeScript 现代 Web 开发的编码标准和最佳实践，包括类型系统、代码组织和设计模式
 globs: ["**/*.ts", "**/*.tsx", "**/*.d.ts"]
-priority: high
+priority: medium
 tags: [typescript, web-development, types, patterns]
 version: 1.0.0
 author: Turbo AI Rules
@@ -95,12 +95,14 @@ TypeScript 开发的核心最佳实践，涵盖类型系统、命名约定、代
 ## 工具配置
 
 **推荐版本和配置：**
+
 - TypeScript 5.0+
 - Node.js 18+
 - ESLint 8+
 - Prettier 3+
 
 **tsconfig.json 配置示例：**
+
 ```json
 {
   "compilerOptions": {

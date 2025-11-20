@@ -1,0 +1,577 @@
+---
+id: 001
+title: 通用编码规范
+description: 跨语言的通用编码标准和最佳实践
+globs: ["**/*"]
+priority: medium
+tags: [general, coding-standards, best-practices, clean-code]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# 通用编码规范
+
+## 适用场景
+
+- 所有编程项目
+- 跨语言开发
+- 代码审查
+- 团队协作
+- 代码重构
+- 新项目初始化
+
+## 核心内容
+
+适用于所有编程语言的通用编码标准和最佳实践，包括命名规范、代码组织、注释、错误处理等方面。
+
+## 关键原则
+
+- ✅ 代码可读性优先
+- ✅ 保持简单（KISS）
+- ✅ 不要重复（DRY）
+- ✅ 单一职责原则
+- ✅ 提前优化是万恶之源
+- ✅ 代码自解释
+- ✅ 测试驱动开发
+
+## 命名规范
+
+### 通用命名原则
+
+```
+✅ 好的命名：
+- getUserById
+- totalPrice
+- isEmailValid
+- calculateTotalAmount
+- MAX_RETRY_COUNT
+
+❌ 糟糕的命名：
+- getData
+- tmp
+- x, y, z
+- doStuff
+- func1
+```
+
+### 不同类型命名
+
+**变量和函数：**
+
+```javascript
+// 使用描述性名称
+const userEmail = "user@example.com"; // ✅
+const e = "user@example.com"; // ❌
+
+// 布尔值使用 is/has/can 前缀
+const isActive = true; // ✅
+const hasPermission = checkPermission(); // ✅
+const active = true; // ❌
+
+// 函数名使用动词
+function calculateTotal() {} // ✅
+function total() {} // ❌
+
+// 避免使用无意义的名称
+const userData = fetchUser(); // ✅
+const temp = fetchUser(); // ❌
+```
+
+**常量：**
+
+```javascript
+// 使用大写字母和下划线
+const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // ✅
+const API_BASE_URL = "https://api.example.com"; // ✅
+const maxUploadSize = 5000000; // ❌
+```
+
+**类和接口：**
+
+```typescript
+// 使用 PascalCase
+class UserService {} // ✅
+interface PaymentProvider {} // ✅
+class userservice {} // ❌
+```
+
+### 命名长度
+
+```
+✅ 合适的长度：
+- 局部变量：1-2 个单词
+- 函数/方法：2-4 个单词
+- 类名：1-3 个单词
+- 常量：2-4 个单词
+
+❌ 避免：
+- 过短：a, b, x, tmp
+- 过长：theUserEmailAddressThatWasProvidedDuringRegistration
+```
+
+## 代码组织
+
+### 文件结构
+
+```
+单个文件应该：
+✅ 职责单一
+✅ 长度适中（< 300 行）
+✅ 逻辑分组清晰
+✅ 导入顺序一致
+
+示例结构：
+1. 导入语句（外部库 → 内部模块 → 类型）
+2. 类型定义
+3. 常量
+4. 主要代码
+5. 导出语句
+```
+
+**示例：**
+
+```typescript
+// 1. 外部库导入
+import express from "express";
+import { z } from "zod";
+
+// 2. 内部模块导入
+import { UserService } from "./services/user";
+import { logger } from "./utils/logger";
+
+// 3. 类型导入
+import type { Request, Response } from "express";
+
+// 4. 类型定义
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+// 5. 常量
+const MAX_USERS_PER_PAGE = 20;
+
+// 6. 主要代码
+class UserController {
+  // ...
+}
+
+// 7. 导出
+export { UserController };
+```
+
+### 函数组织
+
+```
+函数应该：
+✅ 单一职责
+✅ 短小精悍（< 20 行）
+✅ 参数数量少（< 4 个）
+✅ 避免深层嵌套（< 3 层）
+```
+
+**重构嵌套代码：**
+
+```javascript
+// ❌ 深层嵌套
+function processOrder(order) {
+  if (order) {
+    if (order.items.length > 0) {
+      if (order.isPaid) {
+        if (order.user) {
+          // 处理订单
+        }
+      }
+    }
+  }
+}
+
+// ✅ 提前返回（Guard Clauses）
+function processOrder(order) {
+  if (!order) return;
+  if (order.items.length === 0) return;
+  if (!order.isPaid) return;
+  if (!order.user) return;
+
+  // 处理订单
+}
+```
+
+### 参数对象化
+
+```javascript
+// ❌ 参数过多
+function createUser(name, email, age, address, phone, role) {
+  // ...
+}
+
+// ✅ 使用对象
+function createUser({ name, email, age, address, phone, role }) {
+  // ...
+}
+
+// 或使用类型
+interface CreateUserParams {
+  name: string;
+  email: string;
+  age: number;
+  address: string;
+  phone: string;
+  role: string;
+}
+
+function createUser(params: CreateUserParams) {
+  // ...
+}
+```
+
+## 注释规范
+
+### 注释原则
+
+```
+✅ 好的注释：
+- 解释 WHY（为什么）而非 WHAT（是什么）
+- 记录复杂的业务逻辑
+- 标注临时解决方案（TODO, FIXME）
+- API 文档注释
+
+❌ 糟糕的注释：
+- 重复代码内容
+- 过时的注释
+- 注释掉的代码
+- 无意义的注释
+```
+
+**示例：**
+
+```javascript
+// ❌ 重复代码
+// 将用户年龄加1
+user.age = user.age + 1;
+
+// ✅ 解释原因
+// 使用 setTimeout 而非 setInterval 避免重叠执行
+setTimeout(function tick() {
+  doSomething();
+  setTimeout(tick, 1000);
+}, 1000);
+
+// ✅ 记录业务逻辑
+// 根据业务规则，VIP 用户享受 20% 折扣
+// 普通用户在订单金额超过 1000 元时享受 10% 折扣
+const discount = user.isVIP ? 0.2 : orderTotal > 1000 ? 0.1 : 0;
+
+// ✅ 标注待办事项
+// TODO: 实现缓存机制提升性能
+// FIXME: 修复边界情况下的计算错误
+// HACK: 临时解决方案，等待上游 API 修复
+```
+
+### 文档注释
+
+```javascript
+/**
+ * 计算两个数字的和
+ * @param {number} a - 第一个数字
+ * @param {number} b - 第二个数字
+ * @returns {number} 两数之和
+ * @throws {TypeError} 如果参数不是数字
+ * @example
+ * add(1, 2); // 返回 3
+ */
+function add(a, b) {
+  if (typeof a !== "number" || typeof b !== "number") {
+    throw new TypeError("Parameters must be numbers");
+  }
+  return a + b;
+}
+```
+
+## 错误处理
+
+### 明确的错误处理
+
+```javascript
+// ❌ 吞噬错误
+try {
+  riskyOperation();
+} catch (e) {
+  // 什么都不做
+}
+
+// ✅ 适当处理错误
+try {
+  riskyOperation();
+} catch (error) {
+  logger.error("Failed to perform risky operation", { error });
+  throw new ApplicationError("Operation failed", { cause: error });
+}
+
+// ✅ 提供降级方案
+async function getUserData(userId) {
+  try {
+    return await api.fetchUser(userId);
+  } catch (error) {
+    logger.warn("Failed to fetch user from API, using cache", { userId, error });
+    return await cache.getUser(userId);
+  }
+}
+```
+
+### 自定义错误类
+
+```typescript
+// 创建有意义的错误类
+class ValidationError extends Error {
+  constructor(message: string, public field: string, public value: unknown) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+class NotFoundError extends Error {
+  constructor(public resource: string, public id: string) {
+    super(`${resource} with id ${id} not found`);
+    this.name = "NotFoundError";
+  }
+}
+
+// 使用
+function validateEmail(email: string) {
+  if (!isValidEmail(email)) {
+    throw new ValidationError("Invalid email format", "email", email);
+  }
+}
+```
+
+## 代码复用
+
+### DRY 原则（Don't Repeat Yourself）
+
+```javascript
+// ❌ 重复代码
+function calculateDiscountForVIP(price) {
+  const tax = price * 0.1;
+  const discount = price * 0.2;
+  return price + tax - discount;
+}
+
+function calculateDiscountForRegular(price) {
+  const tax = price * 0.1;
+  const discount = price * 0.1;
+  return price + tax - discount;
+}
+
+// ✅ 提取共同逻辑
+function calculateFinalPrice(price, discountRate) {
+  const TAX_RATE = 0.1;
+  const tax = price * TAX_RATE;
+  const discount = price * discountRate;
+  return price + tax - discount;
+}
+
+function calculateDiscountForVIP(price) {
+  return calculateFinalPrice(price, 0.2);
+}
+
+function calculateDiscountForRegular(price) {
+  return calculateFinalPrice(price, 0.1);
+}
+```
+
+## 代码格式化
+
+### 一致的代码风格
+
+```
+使用自动格式化工具：
+- Prettier（多语言）
+- Black（Python）
+- gofmt（Go）
+- rustfmt（Rust）
+
+配置示例（.prettierrc）：
+{
+  "semi": true,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 80
+}
+```
+
+### 缩进和空格
+
+```javascript
+// ✅ 一致的缩进（2 或 4 空格）
+function example() {
+  if (condition) {
+    doSomething();
+  }
+}
+
+// ✅ 适当的空行分隔逻辑块
+function processOrder(order) {
+  // 验证订单
+  validateOrder(order);
+
+  // 计算价格
+  const total = calculateTotal(order);
+
+  // 保存订单
+  saveOrder(order, total);
+}
+```
+
+## 性能考虑
+
+### 避免过早优化
+
+```javascript
+// ✅ 先写清晰的代码
+function findUser(users, id) {
+  return users.find((user) => user.id === id);
+}
+
+// 有性能问题时再优化
+function findUser(users, id) {
+  // 使用 Map 提升查找性能
+  const userMap = new Map(users.map((u) => [u.id, u]));
+  return userMap.get(id);
+}
+```
+
+### 合理的数据结构选择
+
+```javascript
+// ❌ 不合适的数据结构
+const users = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Bob" },
+];
+// 频繁查找：O(n)
+const user = users.find((u) => u.id === targetId);
+
+// ✅ 使用 Map 提升查找性能
+const usersMap = new Map([
+  [1, { id: 1, name: "Alice" }],
+  [2, { id: 2, name: "Bob" }],
+]);
+// 查找：O(1)
+const user = usersMap.get(targetId);
+```
+
+## 安全实践
+
+### 输入验证
+
+```javascript
+// ✅ 总是验证用户输入
+function createUser(data) {
+  const schema = z.object({
+    name: z.string().min(1).max(100),
+    email: z.string().email(),
+    age: z.number().min(0).max(150),
+  });
+
+  const validated = schema.parse(data);
+  // 使用验证后的数据
+}
+
+// ❌ 直接使用未验证的输入
+function createUser(data) {
+  db.insert({ name: data.name, email: data.email });
+}
+```
+
+### 避免敏感信息泄露
+
+```javascript
+// ❌ 日志包含敏感信息
+logger.info("User login", { email, password });
+
+// ✅ 排除敏感信息
+logger.info("User login", { email });
+
+// ✅ 脱敏处理
+logger.info("User login", {
+  email: maskEmail(email),
+  cardNumber: maskCardNumber(cardNumber),
+});
+```
+
+## 测试
+
+### 可测试的代码
+
+```javascript
+// ❌ 难以测试（依赖全局状态）
+function processOrder() {
+  const order = globalState.currentOrder;
+  const user = globalState.currentUser;
+  // ...
+}
+
+// ✅ 易于测试（依赖注入）
+function processOrder(order, user) {
+  // ...
+}
+
+// ✅ 纯函数（相同输入总是产生相同输出）
+function calculateDiscount(price, discountRate) {
+  return price * discountRate;
+}
+```
+
+## 工具配置
+
+**推荐工具：**
+
+```json
+{
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "eslint": "^8.0.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^13.0.0",
+    "editorconfig": "^2.0.0"
+  }
+}
+```
+
+**.editorconfig：**
+
+```ini
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml}]
+indent_size = 2
+```
+
+## 常见问题
+
+**Q: 如何处理技术债务？**
+A: 记录 TODO 注释，定期安排重构时间，优先处理高影响的技术债务。
+
+**Q: 代码审查应该关注什么？**
+A: 逻辑正确性、可读性、性能、安全性、测试覆盖率。
+
+## 扩展阅读
+
+- [Clean Code - Robert C. Martin](https://www.amazon.com/Clean-Code-Handbook-Software-Craftsmanship/dp/0132350882)
+- [Code Complete - Steve McConnell](https://www.amazon.com/Code-Complete-Practical-Handbook-Construction/dp/0735619670)
+- [The Pragmatic Programmer](https://pragprog.com/titles/tpp20/the-pragmatic-programmer-20th-anniversary-edition/)

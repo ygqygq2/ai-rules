@@ -35,13 +35,27 @@
 - `title`: 规则标题 (必填)
 - `description`: 规则描述 (必填)
 - `globs`: 适用文件模式数组 (必填)
-- `priority`: 优先级 (high/medium/low)
+- `priority`: 优先级 (high/medium/low) - 见下方"优先级规范"
 - `tags`: 标签数组
 - `version`: 版本号
 - `author`: 作者
 - `lastUpdated`: 最后更新日期
 
+**优先级规范:**
+
+- **单一规则 (medium)**: 专注于单一技术栈的规则，如纯 TypeScript、纯 Python、纯 React 等
+  - 保持规则的单一职责，不混合其他技术栈
+  - 例如：TypeScript 规则不应包含 Tailwind CSS 相关内容
+  - 单一规则设计为可灵活组合，用户可选择多个单一规则组合使用
+- **组合规则 (high)**: 多个技术栈组合使用时的特定规则
+  - 用于处理多技术栈协同工作时的特殊场景和最佳实践
+  - 例如：TypeScript + Tailwind CSS 组合规则
+  - 当与单一规则冲突时，组合规则具有更高优先级
+  - 仅在组合场景下的规则与单一规则显著不同时才创建组合规则
+
 **完整示例:**
+
+**示例 1: 单一规则**
 
 ```markdown
 ---
@@ -49,7 +63,7 @@ id: 101
 title: Python 最佳实践
 description: Python 3.12+ 现代软件开发的最佳实践和模式
 globs: ["**/*.py", "src/**/*.py", "tests/**/*.py"]
-priority: high
+priority: medium
 tags: [python, flask, sqlalchemy, testing]
 version: 1.0.0
 author: Turbo AI Rules
@@ -67,7 +81,7 @@ lastUpdated: 2025-10-26
 
 ## 核心内容
 
-Python 开发的核心最佳实践，包括项目结构、代码风格、类型提示等。
+Python 开发的核心最佳实践,包括项目结构、代码风格、类型提示等。
 
 ## 关键原则
 
@@ -83,6 +97,49 @@ Python 开发的核心最佳实践，包括项目结构、代码风格、类型�
 ## 代码示例
 
 具体的 Python 代码示例和模式...
+```
+
+**示例 2: 组合规则**
+
+```markdown
+---
+id: 205
+title: TypeScript + Tailwind CSS 组合最佳实践
+description: TypeScript 与 Tailwind CSS 组合使用的特定模式和最佳实践
+globs: ["**/*.tsx", "**/*.ts"]
+priority: high
+tags: [typescript, tailwindcss, react, combination]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-20
+---
+
+# TypeScript + Tailwind CSS 组合最佳实践
+
+## 适用场景
+
+- TypeScript 项目集成 Tailwind CSS
+- React/Next.js 项目使用 TypeScript 和 Tailwind
+- 需要类型安全的样式系统
+
+## 核心内容
+
+多技术栈组合场景下的特定模式,处理技术栈之间的协同工作。
+
+## 关键原则
+
+- ✅ 使用 TypeScript 类型化的 Tailwind 配置
+- ✅ 组件 props 类型定义结合 Tailwind 变体
+- ✅ 使用 clsx/cn 工具函数处理条件样式
+- ✅ 类型安全的主题配置和自定义样式
+
+## 技术栈集成模式
+
+组合使用时的特定配置和模式...
+
+## 代码示例
+
+展示多技术栈协同工作的代码...
 ```
 
 ### 目录结构模式

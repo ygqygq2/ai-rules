@@ -3,7 +3,7 @@ id: 204
 title: Tailwind CSS 最佳实践
 description: Tailwind CSS 3+ 现代 Web 应用的样式设计最佳实践，包括组件库集成和响应式设计
 globs: ["**/*.css", "**/*.tsx", "**/*.jsx", "tailwind.config.js", "tailwind.config.ts"]
-priority: high
+priority: medium
 tags: [tailwind, css, ui, responsive, design-system]
 version: 1.0.0
 author: Turbo AI Rules
@@ -91,34 +91,36 @@ Tailwind CSS 的最佳实践，涵盖项目设置、组件样式、布局系统�
 ## 工具配置
 
 **推荐版本和配置：**
+
 - Tailwind CSS 3.3+
 - PostCSS 8+
 - Autoprefixer 10+
 
 **tailwind.config.ts 配置示例：**
+
 ```js
-import type { Config } from 'tailwindcss'
+import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          500: '#3b82f6',
-          900: '#1e3a8a',
+          50: "#eff6ff",
+          500: "#3b82f6",
+          900: "#1e3a8a",
         },
       },
     },
   },
   plugins: [],
-}
-export default config
+};
+export default config;
 ```
 
 ## 常见问题
