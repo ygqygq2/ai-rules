@@ -4,6 +4,8 @@
 
 ## 📋 规则列表
 
+### 【前端框架】201-219
+
 ### [201. React 最佳实践](./201-react.mdc)
 
 **适用场景：**
@@ -69,7 +71,29 @@
 
 ---
 
-### [204. Tailwind CSS 最佳实践](./204-tailwind.mdc)
+### [205. Astro 最佳实践](./205-astro.mdc)
+
+**适用场景：**
+
+- Astro 4+ 项目
+- 内容驱动的网站
+- 多框架集成
+- 静态网站生成
+
+**核心内容：**
+
+- 项目结构和文件组织
+- 组件开发（Astro 组件、框架组件）
+- 内容集合（Content Collections）
+- 性能优化（部分注水、Islands 架构）
+- 路由和导航
+- 样式和 CSS 集成
+
+---
+
+### 【UI/CSS 框架】220-239
+
+### [220. Tailwind CSS 最佳实践](./220-tailwind.mdc)
 
 **适用场景：**
 
@@ -91,6 +115,51 @@
 
 ---
 
+### [221. Chakra UI v3 最佳实践](./221-chakra-ui.mdc)
+
+**适用场景：**
+
+- Chakra UI v3+ React 项目
+- 组件驱动的 UI 开发
+- 可访问性优先的应用
+- 主题定制和设计系统
+- Next.js + Chakra UI 集成
+
+**核心内容：**
+
+- 组件使用模式（chakra factory、组件组合）
+- 主题系统（tokens、recipes、语义化令牌）
+- 响应式设计（对象/数组语法）
+- 深色模式（ColorModeProvider）
+- TypeScript 集成（类型化 props 和主题）
+- 表单处理（React Hook Form + Zod）
+- 性能优化（按需导入、减少运行时开销）
+- 可访问性最佳实践（ARIA、语义化组件）
+
+---
+
+### 【组合规则】270-289
+
+### [270. TypeScript + React + Tailwind CSS 组合最佳实践](./270-typescript-react-tailwind.mdc)
+
+**适用场景：**
+
+- TypeScript + React + Tailwind CSS 组合项目
+- 类型安全的 React 开发
+- 实用优先的样式系统
+
+---
+
+### [271. Next.js + TypeScript + Tailwind CSS 组合最佳实践](./271-nextjs-typescript-tailwind.mdc)
+
+**适用场景：**
+
+- Next.js 14+ App Router 项目
+- TypeScript + Tailwind CSS 集成
+- 全栈 React 应用开发
+
+---
+
 ## 🎯 使用指南
 
 ### 按技术栈选择
@@ -99,12 +168,30 @@
 
 1. [201-react.mdc](./201-react.mdc) - 基础组件开发
 2. [202-nextjs.mdc](./202-nextjs.mdc) - 应用架构和路由
-3. [204-tailwind.mdc](./204-tailwind.mdc) - 样式设计
+3. [220-tailwind.mdc](./220-tailwind.mdc) - 样式设计
+4. [271-nextjs-typescript-tailwind.mdc](./271-nextjs-typescript-tailwind.mdc) - 组合最佳实践
 
-**Vue + Nuxt + Tailwind：**
+**React + Tailwind（单页应用）：**
+
+1. [201-react.mdc](./201-react.mdc) - 基础组件开发
+2. [220-tailwind.mdc](./220-tailwind.mdc) - 样式设计
+3. [270-typescript-react-tailwind.mdc](./270-typescript-react-tailwind.mdc) - 组合最佳实践
+
+**React + Next.js + Chakra UI：**
+
+1. [201-react.mdc](./201-react.mdc) - 基础组件开发
+2. [202-nextjs.mdc](./202-nextjs.mdc) - 应用架构和路由
+3. [221-chakra-ui.mdc](./221-chakra-ui.mdc) - UI 组件库和主题系统
+
+**Vue + Tailwind：**
 
 1. [203-vue.mdc](./203-vue.mdc) - 组件和状态管理
-2. [204-tailwind.mdc](./204-tailwind.mdc) - UI 设计
+2. [220-tailwind.mdc](./220-tailwind.mdc) - UI 设计
+
+**内容网站（Astro）：**
+
+1. [205-astro.mdc](./205-astro.mdc) - 静态网站和内容管理
+2. [220-tailwind.mdc](./220-tailwind.mdc) - 样式设计
 
 ### 按开发阶段
 
@@ -112,14 +199,14 @@
 
 1. 选择框架并配置开发环境
 2. 设置 ESLint 和 Prettier
-3. 配置 Tailwind CSS
+3. 配置 UI 框架（Tailwind CSS 或 Chakra UI）
 4. 建立项目结构
 
 **组件开发：**
 
 1. 遵循框架特定的组件模式
 2. 实施适当的状态管理
-3. 使用 Tailwind 实用类
+3. 使用 UI 框架组件和样式
 4. 编写可测试的代码
 
 **性能优化：**
@@ -143,7 +230,9 @@
 - [React 官方文档](https://react.dev/)
 - [Next.js 官方文档](https://nextjs.org/docs)
 - [Vue 3 官方文档](https://vuejs.org/)
+- [Astro 官方文档](https://astro.build/)
 - [Tailwind CSS 官方文档](https://tailwindcss.com/docs)
+- [Chakra UI 官方文档](https://www.chakra-ui.com/)
 - [Nuxt 3 官方文档](https://nuxt.com/)
 
 ---
@@ -152,16 +241,17 @@
 
 **添加新框架规范：**
 
-1. 使用三位数编号（20x 系列）
+1. 根据类型选择合适的编号区间
 2. 创建 `.mdc` 文件，包含完整的 frontmatter
 3. 包含：项目结构、核心概念、最佳实践、性能优化
-4. 更新本 index.md 文件
+4. 更新本 README.md 文件
 
 **编号规则：**
 
-- 201-210: React 生态（React, Next.js, Remix）
-- 211-220: Vue 生态（Vue, Nuxt, Vite）
-- 221-230: Angular 生态
-- 231-240: 其他框架（Svelte, Solid.js 等）
-- 241-250: UI/CSS 框架（Tailwind, Bootstrap, Material-UI）
-- 251-260: 状态管理（Redux, Zustand, Pinia）
+- **201-219**: 前端框架（React, Next.js, Vue, Nuxt, Astro, Remix, Svelte, Angular 等）
+- **220-239**: UI/CSS 框架（Tailwind CSS, Chakra UI, shadcn/ui, Ant Design, Material-UI, Mantine 等）
+- **240-249**: 状态管理（Redux, Zustand, Jotai, Recoil, MobX, Pinia, XState 等）
+- **250-259**: 构建工具（Vite, Webpack, Turbopack, Rollup, esbuild 等）
+- **260-269**: IDE/编辑器扩展（VSCode 扩展开发、JetBrains 插件等）
+- **270-289**: 组合规则（TypeScript+React+Tailwind, Next.js+TypeScript+Tailwind 等多技术栈组合）
+- **290-299**: 其他框架和工具（预留）

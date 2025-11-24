@@ -1,5 +1,5 @@
 ---
-id: 206
+id: 270
 title: TypeScript + React + Tailwind CSS 组合最佳实践
 description: TypeScript、React 和 Tailwind CSS 组合使用时的特定集成模式和协同工作实践
 globs: ["**/*.tsx", "components/**/*", "tailwind.config.ts"]

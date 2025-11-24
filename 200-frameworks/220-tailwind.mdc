@@ -1,5 +1,5 @@
 ---
-id: 204
+id: 220
 title: Tailwind CSS 最佳实践
 description: Tailwind CSS 3+ 现代 Web 应用的样式设计最佳实践，包括组件库集成和响应式设计
 globs: ["**/*.css", "**/*.tsx", "**/*.jsx", "tailwind.config.js", "tailwind.config.ts"]

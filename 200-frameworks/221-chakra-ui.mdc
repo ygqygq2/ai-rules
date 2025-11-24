@@ -1,0 +1,438 @@
+---
+id: 221
+title: Chakra UI v3 最佳实践
+description: Chakra UI v3 现代 React 应用的组件库最佳实践，包括主题定制和可访问性设计
+globs: ["**/*.tsx", "**/*.jsx", "**/*.ts", "theme.ts", "chakra.config.ts"]
+priority: medium
+tags: [chakra-ui, react, ui, components, accessibility, design-system]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-11-24
+---
+
+# Chakra UI v3 最佳实践
+
+## 适用场景
+
+- Chakra UI v3+ React 项目
+- 组件驱动的 UI 开发
+- 可访问性优先的应用
+- 主题定制和设计系统
+- Next.js + Chakra UI 集成
+- TypeScript + Chakra UI 项目
+
+## 核心内容
+
+Chakra UI v3 的最佳实践，涵盖组件使用、主题系统、样式模式、可访问性、性能优化和 TypeScript 集成。
+
+## 关键原则
+
+- ✅ 优先使用内置组件而非自定义实现
+- ✅ 使用 `chakra factory` 创建自定义组件
+- ✅ 遵循可访问性最佳实践（ARIA）
+- ✅ 利用主题系统保持设计一致性
+- ✅ 使用 TypeScript 类型安全
+- ✅ 优先使用 Style Props 而非 CSS
+
+## 项目设置
+
+### 安装和配置
+
+```bash
+npm install @chakra-ui/react @emotion/react
+```
+
+### Provider 设置（v3 新方式）
+
+```tsx
+// app/providers.tsx
+"use client";
+
+import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return <ChakraProvider value={defaultSystem}>{children}</ChakraProvider>;
+}
+```
+
+### Next.js App Router 集成
+
+```tsx
+// app/layout.tsx
+import { Providers } from "./providers";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="zh-CN" suppressHydrationWarning>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+## 组件使用模式
+
+### 使用 Chakra Factory（v3 推荐）
+
+```tsx
+import { chakra } from "@chakra-ui/react";
+
+// 创建带样式的组件
+const Card = chakra("div", {
+  base: {
+    p: "6",
+    borderRadius: "lg",
+    bg: "white",
+    boxShadow: "md",
+  },
+});
+
+// 使用
+<Card>内容</Card>;
+```
+
+### 组件组合模式
+
+```tsx
+import { Box, Flex, Heading, Text } from "@chakra-ui/react";
+
+// ✅ 推荐：组合原子组件
+function UserCard({ name, email }: { name: string; email: string }) {
+  return (
+    <Box p={6} borderRadius="lg" bg="white" boxShadow="md">
+      <Heading size="md" mb={2}>
+        {name}
+      </Heading>
+      <Text color="gray.600">{email}</Text>
+    </Box>
+  );
+}
+
+// ❌ 避免：过度嵌套
+function BadCard() {
+  return (
+    <Box>
+      <Box>
+        <Box>
+          <Box>内容</Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+```
+
+### 响应式设计
+
+```tsx
+import { Box, Stack } from "@chakra-ui/react";
+
+// 对象语法（推荐）
+<Box
+  fontSize={{ base: "sm", md: "md", lg: "lg" }}
+  p={{ base: 4, md: 6, lg: 8 }}
+>
+  响应式内容
+</Box>
+
+// 数组语法
+<Stack direction={{ base: "column", md: "row" }} spacing={4}>
+  <Box>项目 1</Box>
+  <Box>项目 2</Box>
+</Stack>
+```
+
+## 主题定制
+
+### 创建自定义主题（v3 方式）
+
+```ts
+// theme/index.ts
+import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
+
+const customConfig = defineConfig({
+  theme: {
+    tokens: {
+      colors: {
+        brand: {
+          50: { value: "#e6f2ff" },
+          500: { value: "#0066cc" },
+          900: { value: "#003366" },
+        },
+      },
+      fonts: {
+        heading: { value: `'Inter', sans-serif` },
+        body: { value: `'Inter', sans-serif` },
+      },
+    },
+    semanticTokens: {
+      colors: {
+        primary: { value: "{colors.brand.500}" },
+        "bg.surface": {
+          value: { base: "white", _dark: "gray.800" },
+        },
+      },
+    },
+  },
+});
+
+export const system = createSystem(defaultConfig, customConfig);
+```
+
+### 组件样式定制
+
+```ts
+// theme/components/button.ts
+import { defineRecipe } from "@chakra-ui/react";
+
+export const buttonRecipe = defineRecipe({
+  base: {
+    fontWeight: "semibold",
+    borderRadius: "md",
+  },
+  variants: {
+    visual: {
+      solid: {
+        bg: "primary",
+        color: "white",
+        _hover: { bg: "brand.600" },
+      },
+      outline: {
+        borderWidth: "2px",
+        borderColor: "primary",
+      },
+    },
+    size: {
+      sm: { px: "3", py: "1.5", fontSize: "sm" },
+      md: { px: "4", py: "2", fontSize: "md" },
+      lg: { px: "6", py: "3", fontSize: "lg" },
+    },
+  },
+  defaultVariants: {
+    visual: "solid",
+    size: "md",
+  },
+});
+```
+
+## 深色模式
+
+### 配置深色模式（v3）
+
+```tsx
+// app/providers.tsx
+"use client";
+
+import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
+import { ColorModeProvider } from "@/components/ui/color-mode";
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <ChakraProvider value={defaultSystem}>
+      <ColorModeProvider>{children}</ColorModeProvider>
+    </ChakraProvider>
+  );
+}
+```
+
+### 使用深色模式
+
+```tsx
+import { Box, useColorMode, IconButton } from "@chakra-ui/react";
+import { MoonIcon, SunIcon } from "@chakra-ui/icons";
+
+function ThemeToggle() {
+  const { colorMode, toggleColorMode } = useColorMode();
+
+  return (
+    <IconButton
+      aria-label="切换主题"
+      icon={colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+      onClick={toggleColorMode}
+    />
+  );
+}
+
+// 响应深色模式的样式
+<Box bg={{ base: "white", _dark: "gray.800" }} color={{ base: "black", _dark: "white" }}>
+  内容
+</Box>;
+```
+
+## TypeScript 集成
+
+### 组件 Props 类型化
+
+```tsx
+import { BoxProps, FlexProps } from "@chakra-ui/react";
+
+interface CardProps extends BoxProps {
+  title: string;
+  description: string;
+  variant?: "solid" | "outline";
+}
+
+function Card({ title, description, variant = "solid", ...props }: CardProps) {
+  return (
+    <Box p={6} borderRadius="lg" borderWidth={variant === "outline" ? "1px" : 0} {...props}>
+      <Heading size="md">{title}</Heading>
+      <Text>{description}</Text>
+    </Box>
+  );
+}
+```
+
+### 主题类型化
+
+```ts
+import { createSystem } from "@chakra-ui/react";
+
+const system = createSystem({
+  // TypeScript 会自动推断类型
+});
+
+type SystemType = typeof system;
+```
+
+## 表单处理
+
+### 使用 React Hook Form + Zod
+
+```tsx
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Field } from "@/components/ui/field";
+import { Button, Input, VStack } from "@chakra-ui/react";
+
+const schema = z.object({
+  email: z.string().email("无效的邮箱地址"),
+  password: z.string().min(8, "密码至少 8 个字符"),
+});
+
+type FormData = z.infer<typeof schema>;
+
+function LoginForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+  });
+
+  const onSubmit = (data: FormData) => {
+    console.log(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <VStack spacing={4} align="stretch">
+        <Field label="邮箱" invalid={!!errors.email} errorText={errors.email?.message}>
+          <Input {...register("email")} type="email" />
+        </Field>
+
+        <Field label="密码" invalid={!!errors.password} errorText={errors.password?.message}>
+          <Input {...register("password")} type="password" />
+        </Field>
+
+        <Button type="submit" colorScheme="blue">
+          登录
+        </Button>
+      </VStack>
+    </form>
+  );
+}
+```
+
+## 性能优化
+
+### 按需导入组件
+
+```tsx
+// ✅ 推荐：按需导入
+import { Button, Box } from "@chakra-ui/react";
+
+// ❌ 避免：全量导入
+import * as Chakra from "@chakra-ui/react";
+```
+
+### 使用 chakra factory 减少运行时开销
+
+```tsx
+// 在组件外部定义样式
+const StyledBox = chakra("div", {
+  base: {
+    p: 4,
+    bg: "white",
+  },
+});
+
+// 使用预定义组件
+function Component() {
+  return <StyledBox>内容</StyledBox>;
+}
+```
+
+## 可访问性最佳实践
+
+```tsx
+import { Button, Input, FormLabel, VisuallyHidden } from "@chakra-ui/react";
+
+// ✅ 推荐：提供无障碍标签
+<>
+  <FormLabel htmlFor="search">搜索</FormLabel>
+  <Input id="search" aria-label="搜索内容" />
+</>;
+
+// ✅ 推荐：使用语义化按钮
+<Button onClick={handleClick} aria-label="关闭对话框">
+  关闭
+</Button>;
+
+// ✅ 推荐：隐藏但保留可访问性
+<VisuallyHidden>仅屏幕阅读器可见的文本</VisuallyHidden>;
+```
+
+## 常见问题
+
+**Q: Chakra UI v3 与 v2 的主要区别？**
+A: v3 使用新的主题系统（tokens + recipes），移除了旧的 `extendTheme`，改用 `createSystem` 和 `defineConfig`。
+
+**Q: 如何处理 SSR/SSG 中的样式闪烁？**
+A: 在 Next.js 中使用 `suppressHydrationWarning` 并正确配置 Provider。
+
+**Q: 何时使用 `chakra()` vs 直接使用组件？**
+A: 对于重复使用的样式模式使用 `chakra()`，简单情况直接使用组件 + props。
+
+**Q: 如何优化包体积？**
+A: 按需导入组件，使用 tree-shaking，避免导入未使用的图标。
+
+## 工具配置
+
+**推荐版本：**
+
+- @chakra-ui/react: 3.0+
+- @emotion/react: 11.11+
+- React: 18+
+- TypeScript: 5.0+
+
+**ESLint 配置（可选）：**
+
+```json
+{
+  "rules": {
+    "react/jsx-props-no-spreading": "off"
+  }
+}
+```
+
+## 扩展阅读
+
+- [Chakra UI v3 官方文档](https://www.chakra-ui.com/)
+- [Chakra UI v3 迁移指南](https://www.chakra-ui.com/docs/get-started/migration)
+- [Chakra UI GitHub](https://github.com/chakra-ui/chakra-ui)
+- [Chakra UI Discord 社区](https://discord.gg/chakra-ui)
+- [Panda CSS（Chakra v3 底层）](https://panda-css.com/)
