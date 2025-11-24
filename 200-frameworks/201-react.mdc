@@ -31,108 +31,68 @@ React 开发的核心最佳实践，涵盖组件结构、Hooks 使用、状态�
 - ✅ 保持组件小而专注
 - ✅ 组合优于继承
 - ✅ 使用 TypeScript 进行类型检查
-- ✅ 实现适当的记忆化（memoization）
+- ✅ 使用 useMemo/useCallback 优化性能
 - ✅ 遵循 React Hooks 规则
 - ✅ 实现错误边界和无障碍访问
 
 ## 组件结构
 
-- 优先使用函数式组件而非类组件
-- 保持组件小而专注
-- 将可重用逻辑提取到自定义 Hooks 中
+- 使用函数式组件
+- 保持组件小而专注（<200 行）
+- 可重用逻辑提取为自定义 Hooks
 - 组合优于继承
-- 使用 TypeScript 实现适当的 prop 类型
-- 将大型组件拆分为更小、更专注的组件
+- TypeScript props 类型定义
 
 ## Hooks 使用
 
-- 遵循 Hooks 规则
-- 使用自定义 hooks 处理可重用逻辑
-- 保持 hooks 专注和简单
-- 在 useEffect 中使用适当的依赖数组
-- 需要时在 useEffect 中实现清理
-- 避免嵌套 hooks
+- 遵循 Hooks 规则（顶层调用，不在条件/循环中）
+- useEffect 依赖数组包含所有外部变量
+- 返回清理函数处理定时器、订阅、事件监听
+- 自定义 hooks 以 use 开头
 
 ## 状态管理
 
-- 本地组件状态使用 useState
-- 复杂状态逻辑实现 useReducer
-- 共享状态使用 Context API
-- 将状态保持在尽可能接近使用的地方
-- 通过适当的状态管理避免 prop drilling
-- 仅在必要时使用状态管理库
+- 局部状态：useState
+- 复杂状态逻辑：useReducer
+- 跨组件共享：Context API
+- 状态下放（colocation）原则
+- 避免 prop drilling，但不滥用 Context
 
 ## 性能优化
 
-- 实现适当的记忆化（useMemo, useCallback）
-- 昂贵组件使用 React.memo
-- 避免不必要的重新渲染
-- 实现适当的懒加载
-- 列表中使用适当的 key props
-- 分析并优化渲染性能
+- useMemo/useCallback 仅用于性能问题，避免过度优化
+- React.memo 包裹昂贵组件
+- 列表使用稳定 key（非 index）
+- React.lazy + Suspense 实现代码分割
+- 使用 React DevTools Profiler 分析渲染
 
 ## 表单处理
 
-- 表单输入使用受控组件
-- 实现适当的表单验证
-- 适当处理表单提交状态
-- 显示适当的加载和错误状态
-- 复杂表单使用表单库
-- 实现表单的适当无障碍访问
+- 使用受控组件
+- 表单验证：React Hook Form + Zod
+- 显示加载和错误状态
+- 提供 ARIA 标签和错误提示
 
 ## 错误处理
 
-- 实现错误边界（Error Boundaries）
-- 适当处理异步错误
-- 显示用户友好的错误消息
-- 实现适当的回退 UI
-- 适当记录错误日志
-- 优雅地处理边缘情况
+- 使用 Error Boundaries 捕获组件错误
+- 异步操作用 try-catch
+- 显示用户友好错误信息
+- 提供 Fallback UI
 
 ## 测试策略
 
-- 为组件编写单元测试
-- 复杂流程实现集成测试
-- 使用 React Testing Library
-- 测试用户交互
-- 测试错误场景
-- 实现适当的模拟数据
+- React Testing Library 测试用户交互
+- 测试行为而非实现细节
+- Mock API 调用和外部依赖
 
 ## 无障碍访问
 
-- 使用语义化 HTML 元素
-- 实现适当的 ARIA 属性
-- 确保键盘导航
-- 使用屏幕阅读器测试
-- 处理焦点管理
-- 为图片提供适当的 alt 文本
-
-## 工具配置
-
-**推荐版本和配置：**
-
-- React 18+
-- TypeScript 5+
-- React Testing Library 13+
-- ESLint React 插件
-
-**组件示例：**
-
-```tsx
-interface ButtonProps {
-  children: React.ReactNode;
-  onClick: () => void;
-  variant?: "primary" | "secondary";
-}
-
-const Button: React.FC<ButtonProps> = ({ children, onClick, variant = "primary" }) => {
-  return (
-    <button className={`btn btn-${variant}`} onClick={onClick}>
-      {children}
-    </button>
-  );
-};
-```
+- 使用语义化 HTML（button, nav, main 等）
+- ARIA 属性：aria-label, role, aria-describedby
+- 键盘导航支持（Tab, Enter, Escape）
+- 焦点管理（autoFocus, tabIndex）
+- 图片 alt 文本
 
 ## 常见问题
 

@@ -258,20 +258,6 @@ export function useTheme() {
 }
 ```
 
-## 组合场景的工具依赖
-
-**必需的组合特定依赖：**
-
-```json
-{
-  "dependencies": {
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0",
-    "class-variance-authority": "^0.7.0"
-  }
-}
-```
-
 ## 常见集成问题
 
 **Q: 如何避免 Tailwind 类名冲突？**

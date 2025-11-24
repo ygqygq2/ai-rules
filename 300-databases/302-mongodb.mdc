@@ -209,7 +209,7 @@ db.posts.aggregate([
 ## Mongoose Schema 设计
 
 - 定义清晰的 Schema
-- 使用适当的验证器
+- 使用 JSON Schema 或 mongoose 验证器
 - 定义虚拟属性
 - 使用中间件处理逻辑
 - 定义实例和静态方法

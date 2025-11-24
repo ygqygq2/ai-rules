@@ -31,80 +31,45 @@ Vue 3 开发的核心最佳实践，涵盖组件结构、Composition API、状�
 - ✅ 保持组件小而专注
 - ✅ 使用 TypeScript 进行类型检查
 - ✅ 使用 Pinia 进行状态管理
-- ✅ 实现适当的响应式数据管理
+- ✅ 使用 ref() 存储基本类型，reactive() 存储对象
 - ✅ 保持模板逻辑最小化
 
 ## 组件结构
 
-- 优先使用 Composition API 而非 Options API
-- 保持组件小而专注
-- 使用适当的 TypeScript 集成
-- 实现适当的 props 验证
-- 使用适当的 emit 声明
-- 保持模板逻辑最小化
+- 使用 Composition API + `<script setup>`
+- TypeScript 类型定义和推断
+- Props 验证：withDefaults + defineProps
+- Emits 声明：defineEmits<T>
 
 ## Composition API
 
-- 使用适当的 ref 和 reactive
-- 实现适当的生命周期钩子
-- 使用组合式函数处理可重用逻辑
-- 保持 setup 函数简洁
-- 使用适当的计算属性
-- 实现适当的侦听器
+- 原始值：ref()
+- 对象/数组：reactive()
+- 计算属性：computed()
+- 侦听器：watch/watchEffect
+- 生命周期：onMounted, onUnmounted 等
 
 ## 状态管理
 
-- 使用 Pinia 进行状态管理
-- 保持 store 模块化
-- 使用适当的状态组合
-- 实现适当的 actions
-- 使用适当的 getters
-- 适当处理异步状态
+- 使用 Pinia（非 Options API）
+- Store 组合：defineStore + setup 语法
+- Actions 处理异步逻辑
+- Getters 计算派生状态
 
 ## 性能优化
 
-- 使用适当的组件懒加载
-- 实现适当的缓存
-- 使用适当的计算属性
-- 避免不必要的侦听器
-- 适当使用 v-show vs v-if
-- 实现适当的 key 管理
+- 组件懒加载：defineAsyncComponent
+- keep-alive 缓存组件
+- v-show vs v-if 选择
+- 列表 :key 管理
+- 虚拟滚动处理大列表
 
 ## 路由管理
 
-- 适当使用 Vue Router
-- 实现适当的导航守卫
-- 使用适当的路由元字段
-- 适当处理路由参数
-- 实现适当的懒加载
-- 使用适当的导航方法
-
-## 工具配置
-
-**推荐版本和配置：**
-- Vue 3.3+
-- Pinia 2+
-- Vue Router 4+
-- Vite 4+
-- TypeScript 5+
-
-**组件示例：**
-```vue
-<script setup lang="ts">
-interface Props {
-  title: string;
-  count?: number;
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  count: 0
-});
-
-const emit = defineEmits<{
-  update: [value: number];
-}>();
-</script>
-```
+- Vue Router 4
+- 路由守卫：beforeEach, beforeEnter
+- 路由 meta 元信息
+- 懒加载路由组件
 
 ## 常见问题
 

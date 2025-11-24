@@ -357,23 +357,6 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 ```
 
-## 组合场景的必需依赖
-
-```json
-{
-  "dependencies": {
-    "next": "^14.0.0",
-    "react": "^18.2.0",
-    "typescript": "^5.0.0",
-    "tailwindcss": "^3.3.0",
-    "zod": "^3.22.0",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0",
-    "class-variance-authority": "^0.7.0"
-  }
-}
-```
-
 ## 常见集成问题
 
 **Q: 服务端组件如何使用 Tailwind？**

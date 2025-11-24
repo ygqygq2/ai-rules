@@ -174,9 +174,9 @@ jest.useRealTimers();
 - 使用 async/await
 - 测试 Promise
 - 测试回调函数
-- 设置适当的超时
+- 配置 jest.setTimeout() 或 test(name, fn, timeout)
 - 处理错误情况
-- 使用 done 回调（必要时）
+- 异步测试使用 async/await 或 done 回调
 
 **异步测试示例：**
 

@@ -701,22 +701,6 @@ export default defineConfig({
 });
 ```
 
-**推荐依赖：**
-
-```json
-{
-  "dependencies": {
-    "astro": "^4.0.0"
-  },
-  "devDependencies": {
-    "@astrojs/tailwind": "^5.0.0",
-    "@astrojs/react": "^3.0.0",
-    "@astrojs/sitemap": "^3.0.0",
-    "typescript": "^5.0.0"
-  }
-}
-```
-
 ## 常见问题
 
 **Q: Astro 与 Next.js 的区别？**

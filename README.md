@@ -14,7 +14,13 @@
 rules/
 ├── 001-general-standards/        # 通用标准和规范
 ├── 100-programming-languages/    # 编程语言
-├── 200-frameworks/               # 开发框架（前后端）
+├── 200-frameworks/               # 框架和库
+│   ├── 201-219: 前端框架 (React, Next.js, Vue, Astro)
+│   ├── 220-239: UI/CSS 框架 (Tailwind, Chakra UI)
+│   ├── 240-249: 状态管理 (Redux, Zustand, Pinia)
+│   ├── 250-259: 构建工具 (Vite, Webpack)
+│   ├── 260-269: IDE/编辑器扩展
+│   └── 270-289: 组合规则 (多技术栈)
 ├── 300-databases/                # 数据库
 ├── 500-api-design/               # API 设计
 ├── 600-testing/                  # 测试

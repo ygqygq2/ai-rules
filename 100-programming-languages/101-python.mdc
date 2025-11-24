@@ -81,7 +81,7 @@ project/
 - 使用 Flask 工厂模式
 - 使用蓝图（Blueprints）组织路由
 - 使用 Flask-SQLAlchemy 进行数据库操作
-- 实现适当的错误处理器
+- 实现错误处理器 (@app.errorhandler)
 - 使用 Flask-Login 进行身份验证
 - 视图层保持关注点分离
 
@@ -89,64 +89,64 @@ project/
 
 - 使用 SQLAlchemy ORM
 - 使用 Alembic 进行数据库迁移
-- 使用适当的连接池
+- 配置连接池 (pool_size, max_overflow)
 - 在独立模块中定义模型
-- 实现适当的关系映射
-- 使用适当的索引策略
+- 使用 relationship(), backref() 定义关联
+- 为常查询字段创建索引
 
 ## 身份认证
 
 - 使用 Flask-Login 进行会话管理
 - 使用 Flask-OAuth 实现 Google OAuth
 - 使用 bcrypt 对密码进行哈希
-- 使用适当的会话安全配置
+- 配置会话安全 (secure=True, httponly=True, samesite='Lax')
 - 实现 CSRF 保护
-- 使用适当的基于角色的访问控制
+- 使用装饰器实现基于角色的访问控制 (@roles_required)
 
 ## API 设计
 
 - 使用 Flask-RESTful 构建 REST API
-- 实现适当的请求验证
-- 使用适当的 HTTP 状态码
+- 使用 reqparse 或 marshmallow 验证请求
+- 返回语义化 HTTP 状态码 (200, 201, 400, 404, 500)
 - 一致地处理错误
-- 使用适当的响应格式
-- 实现适当的速率限制
+- 返回 JSON 格式响应 (jsonify)
+- 使用 Flask-Limiter 实现速率限制
 
 ## 测试策略
 
 - 使用 pytest 进行测试
 - 为所有路由编写测试
 - 使用 pytest-cov 进行覆盖率测试
-- 实现适当的测试夹具
-- 使用 pytest-mock 进行适当的模拟
+- 使用 @pytest.fixture 定义测试夹具
+- 使用 pytest-mock 模拟外部依赖
 - 测试所有错误场景
 
 ## 安全实践
 
 - 在生产环境中使用 HTTPS
-- 实现适当的 CORS 策略
+- 配置 CORS (Flask-CORS, origins=['https://example.com'])
 - 清理所有用户输入
-- 使用适当的会话配置
-- 实现适当的日志记录
+- 配置会话 (SESSION_COOKIE_SECURE, SESSION_COOKIE_HTTPONLY)
+- 使用 logging 模块记录日志
 - 遵循 OWASP 安全准则
 
 ## 性能优化
 
-- 使用 Flask-Caching 进行适当的缓存
-- 实现数据库查询优化
-- 使用适当的连接池
-- 实现适当的分页
-- 对重型操作使用后台任务
+- 使用 Flask-Caching 缓存频繁查询
+- 优化查询 (使用 joinedload, selectinload)
+- 配置连接池参数
+- 使用 paginate() 实现分页
+- 对重型操作使用后台任务 (Celery)
 - 监控应用程序性能
 
 ## 错误处理
 
 - 创建自定义异常类
-- 使用适当的 try-except 块
-- 实现适当的日志记录
-- 返回适当的错误响应
-- 适当处理边缘情况
-- 使用适当的错误消息
+- 使用特定异常类型 (ValueError, TypeError) 捕获错误
+- 使用 logging.error() 记录异常
+- 返回结构化错误 (dict/JSON)
+- 处理边缘情况 (None, 空列表, 边界值)
+- 提供清晰的错误信息
 
 ## 工具配置
 

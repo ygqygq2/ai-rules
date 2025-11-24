@@ -26,17 +26,17 @@ PostgreSQL 数据库开发的核心最佳实践，涵盖表设计、索引策略
 
 ## 关键原则
 
-- ✅ 使用适当的数据类型和约束
+- ✅ 使用语义化数据类型 (JSONB, UUID, ARRAY) 和约束 (NOT NULL, UNIQUE, CHECK)
 - ✅ 为查询模式设计合适的索引
 - ✅ 使用事务确保数据一致性
 - ✅ 避免 N+1 查询问题
 - ✅ 使用 EXPLAIN ANALYZE 分析查询性能
-- ✅ 实施适当的备份和恢复策略
+- ✅ 使用 pg_dump/pg_basebackup 备份，WAL 归档恢复
 
 ## 表设计
 
 - 使用主键（优先使用 SERIAL 或 UUID）
-- 定义适当的外键约束
+- 定义外键约束 (ON DELETE CASCADE/SET NULL)
 - 使用 NOT NULL 约束必填字段
 - 使用 CHECK 约束验证数据
 - 使用 UNIQUE 约束唯一性
@@ -129,7 +129,7 @@ JOIN active_users u ON p.user_id = u.id;
 
 - 使用事务确保数据一致性
 - 保持事务简短
-- 使用适当的隔离级别
+- 选择隔离级别 (READ COMMITTED/SERIALIZABLE)
 - 处理死锁和并发问题
 - 使用 SAVEPOINT 处理部分回滚
 - 避免长事务
@@ -170,7 +170,7 @@ COMMIT;
 - 使用连接池管理连接
 - 定期执行 VACUUM 和 ANALYZE
 - 使用物化视图优化复杂查询
-- 配置适当的内存参数
+- 配置 shared_buffers, work_mem, maintenance_work_mem
 - 监控慢查询日志
 
 **性能分析：**
