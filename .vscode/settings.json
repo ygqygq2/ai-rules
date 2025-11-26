@@ -1,0 +1,17 @@
+{
+  "turbo-ai-rules.adapters.cursor.enabled": true,
+  "turbo-ai-rules.adapters.continue.enabled": true,
+  "turbo-ai-rules.adapters.copilot.enabled": false,
+  "turbo-ai-rules.sources": [
+    {
+      "id": "ai-rules",
+      "name": "ygqygq2's AI Rules",
+      "gitUrl": "https://github.com/ygqygq2/ai-rules.git",
+      "branch": "main",
+      "enabled": true,
+      "auth": {
+        "type": "none"
+      }
+    }
+  ]
+}

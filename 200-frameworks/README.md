@@ -71,6 +71,28 @@
 
 ---
 
+### [204. Wails 3 最佳实践](./204-wails.mdc)
+
+**适用场景：**
+
+- Wails 3 桌面应用开发
+- 跨平台桌面应用（Windows/macOS/Linux）
+- Go 后端 + Web 前端技术栈
+- Electron 替代方案
+- 原生性能的桌面应用
+
+**核心内容：**
+
+- 项目架构（Go 服务、前端绑定、窗口管理）
+- 服务定义（自动生成 TypeScript 绑定）
+- Gin 路由集成（RESTful API）
+- 构建配置（Taskfile.yml、跨平台构建）
+- 事件系统（前后端通信）
+- 性能优化（goroutine、懒加载）
+- 安全实践（输入验证、权限控制）
+
+---
+
 ### [205. Astro 最佳实践](./205-astro.mdc)
 
 **适用场景：**
@@ -188,6 +210,11 @@
 1. [203-vue.mdc](./203-vue.mdc) - 组件和状态管理
 2. [220-tailwind.mdc](./220-tailwind.mdc) - UI 设计
 
+**桌面应用（Wails）：**
+
+1. [204-wails.mdc](./204-wails.mdc) - 跨平台桌面应用开发
+2. [104-go.mdc](../100-programming-languages/104-go.mdc) - Go 后端开发
+
 **内容网站（Astro）：**
 
 1. [205-astro.mdc](./205-astro.mdc) - 静态网站和内容管理
@@ -248,7 +275,7 @@
 
 **编号规则：**
 
-- **201-219**: 前端框架（React, Next.js, Vue, Nuxt, Astro, Remix, Svelte, Angular 等）
+- **201-219**: 前端框架（React, Next.js, Vue, Nuxt, Wails, Astro, Remix, Svelte, Angular 等）
 - **220-239**: UI/CSS 框架（Tailwind CSS, Chakra UI, shadcn/ui, Ant Design, Material-UI, Mantine 等）
 - **240-249**: 状态管理（Redux, Zustand, Jotai, Recoil, MobX, Pinia, XState 等）
 - **250-259**: 构建工具（Vite, Webpack, Turbopack, Rollup, esbuild 等）
