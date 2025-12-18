@@ -1,0 +1,161 @@
+---
+id: 1301
+title: Python Development Skills
+description: Python development best practices and coding skills
+globs: ['**/*.py']
+priority: medium
+tags: [python, skills, development, best-practices]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-12-18
+---
+
+# Python Development Skills
+
+## Core Competencies
+
+### 1. Code Organization
+
+- Use virtual environments (venv, conda) for dependency isolation
+- Follow PEP 8 style guide for consistent code formatting
+- Organize modules by functionality, not file type
+- Use `__init__.py` for package initialization
+- Keep modules focused and cohesive (< 500 lines)
+
+### 2. Type Hints and Documentation
+
+```python
+from typing import List, Optional, Dict
+
+def process_data(
+    items: List[str],
+    config: Optional[Dict[str, any]] = None
+) -> Dict[str, int]:
+    """
+    Process items with optional configuration.
+
+    Args:
+        items: List of strings to process
+        config: Optional configuration dictionary
+
+    Returns:
+        Dictionary mapping items to counts
+
+    Raises:
+        ValueError: If items is empty
+    """
+    if not items:
+        raise ValueError("Items list cannot be empty")
+
+    return {item: len(item) for item in items}
+```
+
+### 3. Error Handling
+
+- Use specific exception types
+- Provide context in error messages
+- Clean up resources with `try-finally` or context managers
+- Log errors appropriately
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+def safe_division(a: float, b: float) -> Optional[float]:
+    """Safely divide two numbers."""
+    try:
+        return a / b
+    except ZeroDivisionError:
+        logger.error(f"Division by zero: {a} / {b}")
+        return None
+    except TypeError as e:
+        logger.error(f"Invalid types for division: {e}")
+        return None
+```
+
+### 4. Testing Practices
+
+- Write unit tests with pytest or unittest
+- Use fixtures for test setup
+- Test edge cases and error conditions
+- Aim for > 80% code coverage
+
+```python
+import pytest
+
+def test_process_data_empty_list():
+    """Test that empty list raises ValueError."""
+    with pytest.raises(ValueError, match="cannot be empty"):
+        process_data([])
+
+def test_process_data_success():
+    """Test successful data processing."""
+    result = process_data(["hello", "world"])
+    assert result == {"hello": 5, "world": 5}
+```
+
+### 5. Performance Optimization
+
+- Use list comprehensions over loops when appropriate
+- Leverage built-in functions and standard library
+- Profile code before optimizing (cProfile, timeit)
+- Consider generators for large datasets
+
+```python
+# Good: List comprehension
+squares = [x**2 for x in range(1000)]
+
+# Better for large data: Generator
+squares_gen = (x**2 for x in range(1000000))
+```
+
+## Best Practices
+
+1. **Dependency Management**: Use `requirements.txt` or `pyproject.toml`
+2. **Code Quality**: Use linters (pylint, flake8) and formatters (black, ruff)
+3. **Security**: Validate user input, use secrets module for sensitive data
+4. **Async Programming**: Use asyncio for I/O-bound operations
+5. **Data Processing**: Leverage pandas, numpy for efficient data manipulation
+
+## Common Patterns
+
+### Context Managers
+
+```python
+from contextlib import contextmanager
+
+@contextmanager
+def open_file_safely(filepath: str):
+    """Safely open and close a file."""
+    f = open(filepath, 'r')
+    try:
+        yield f
+    finally:
+        f.close()
+```
+
+### Decorators
+
+```python
+import functools
+import time
+
+def timing_decorator(func):
+    """Measure function execution time."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        end = time.perf_counter()
+        print(f"{func.__name__} took {end-start:.4f}s")
+        return result
+    return wrapper
+```
+
+## Resources
+
+- PEP 8: Python Style Guide
+- Real Python: Comprehensive tutorials
+- Python Docs: Official documentation
+- pytest: Testing framework

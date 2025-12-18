@@ -1,0 +1,211 @@
+---
+id: 1302
+title: TypeScript Development Skills
+description: TypeScript development best practices and advanced patterns
+globs: ['**/*.ts', '**/*.tsx']
+priority: medium
+tags: [typescript, skills, development, best-practices]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-12-18
+---
+
+# TypeScript Development Skills
+
+## Core Competencies
+
+### 1. Type System Mastery
+
+```typescript
+// Union and Intersection Types
+type Status = 'pending' | 'approved' | 'rejected';
+type User = { name: string } & { id: number };
+
+// Generics
+function identity<T>(value: T): T {
+  return value;
+}
+
+// Utility Types
+type Partial<T> = { [P in keyof T]?: T[P] };
+type ReadonlyDeep<T> = { readonly [P in keyof T]: ReadonlyDeep<T[P]> };
+
+// Conditional Types
+type IsString<T> = T extends string ? true : false;
+
+// Mapped Types
+type Optional<T> = {
+  [P in keyof T]?: T[P];
+};
+```
+
+### 2. Advanced Patterns
+
+#### Discriminated Unions
+
+```typescript
+type Success = {
+  status: 'success';
+  data: any;
+};
+
+type Error = {
+  status: 'error';
+  message: string;
+};
+
+type Result = Success | Error;
+
+function handleResult(result: Result) {
+  if (result.status === 'success') {
+    // TypeScript knows result is Success here
+    console.log(result.data);
+  } else {
+    // TypeScript knows result is Error here
+    console.error(result.message);
+  }
+}
+```
+
+#### Type Guards
+
+```typescript
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function processValue(value: unknown) {
+  if (isString(value)) {
+    // value is string here
+    return value.toUpperCase();
+  }
+  return null;
+}
+```
+
+### 3. Async Patterns
+
+```typescript
+// Promise with proper error handling
+async function fetchData<T>(url: string): Promise<T> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return (await response.json()) as T;
+  } catch (error) {
+    console.error('Fetch failed:', error);
+    throw error;
+  }
+}
+
+// Concurrent requests
+async function fetchMultiple<T>(urls: string[]): Promise<T[]> {
+  const results = await Promise.all(urls.map((url) => fetchData<T>(url)));
+  return results;
+}
+```
+
+### 4. Module Organization
+
+```typescript
+// Use barrel exports (index.ts)
+export * from './types';
+export * from './utils';
+export { default as MyComponent } from './MyComponent';
+
+// Named exports preferred over default
+export class DataService {
+  async getData(): Promise<Data> {
+    // implementation
+  }
+}
+
+// Use path aliases (@/ for src/)
+import { DataService } from '@/services/DataService';
+```
+
+### 5. Configuration Best Practices
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}
+```
+
+## Testing with TypeScript
+
+### Unit Tests
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+
+describe('DataService', () => {
+  let service: DataService;
+
+  beforeEach(() => {
+    service = new DataService();
+  });
+
+  it('should fetch data successfully', async () => {
+    const data = await service.getData();
+    expect(data).toBeDefined();
+    expect(data.items).toHaveLength(0);
+  });
+
+  it('should handle errors gracefully', async () => {
+    await expect(service.getData()).rejects.toThrow('Network error');
+  });
+});
+```
+
+### Type Testing
+
+```typescript
+import { expectType } from 'tsd';
+
+// Test that types are correct
+expectType<string>(identity('hello'));
+expectType<number>(identity(42));
+```
+
+## Performance Tips
+
+1. **Use const assertions**: `const data = { x: 10 } as const;`
+2. **Avoid excessive type checks**: Trust TypeScript, don't validate types at runtime
+3. **Use incremental compilation**: Enable `incremental: true` in tsconfig
+4. **Optimize imports**: Use direct imports instead of barrel exports in large projects
+5. **Enable project references**: For monorepo projects
+
+## Common Pitfalls
+
+1. **Any type abuse**: Use `unknown` instead of `any` when type is truly unknown
+2. **Non-null assertions**: Avoid `!` operator, use proper null checks
+3. **Type assertions**: Use sparingly, prefer type guards
+4. **Enum limitations**: Consider string literal unions instead
+5. **Object.keys() type**: Returns `string[]`, not `keyof T`
+
+## Tools and Ecosystem
+
+- **ESLint**: Use @typescript-eslint for linting
+- **Prettier**: Format code consistently
+- **ts-node**: Run TypeScript directly
+- **tsx**: Fast TypeScript execution
+- **Vitest**: Unit testing framework with TypeScript support
+
+## Resources
+
+- TypeScript Handbook: Official documentation
+- Type Challenges: Practice advanced types
+- DefinitelyTyped: Type definitions repository
