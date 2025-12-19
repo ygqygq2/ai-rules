@@ -1,0 +1,140 @@
+---
+id: 105
+title: Shell 脚本最佳实践
+description: Shell 脚本编程规范，包含命名约定、模块化设计和错误处理
+globs: ["**/*.sh", "**/bash/**", "**/shell/**"]
+priority: medium
+tags: [shell, bash, scripting]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2025-12-19
+---
+
+# Shell 脚本最佳实践
+
+## 适用场景
+
+- Bash/Shell 脚本开发
+- 自动化运维脚本
+- CI/CD 流程脚本
+- 系统初始化和配置脚本
+
+## 核心内容
+
+**基础规范**: 遵循 [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html)
+
+**项目特定风格**: 以下命名和结构约定优先于 Google 规范
+
+## 关键差异（vs Google 规范）
+
+✅ 函数名用**首字母大写 + 下划线**: `Process_Data()` 而非 `process_data()`  
+✅ 函数声明必须用 `function` 关键字: `function Name() {}` 而非 `name()`  
+✅ 必须使用 `Main()` 函数作为程序入口  
+✅ 函数内所有变量严格 `local` 化  
+✅ 多用函数模块化，复杂项目按文件分模块
+
+## 命名规范差异
+
+| 类型     | Google 规范   | 本项目规范      | 示例                         |
+| -------- | ------------- | --------------- | ---------------------------- |
+| 函数名   | `my_function` | `My_Function`   | `function Process_Data() {}` |
+| 全局变量 | `MY_VAR`      | `MY_VAR` (一致) | `SCRIPT_DIR="/path"`         |
+| 局部变量 | `my_var`      | `my_var` (一致) | `local input_file="$1"`      |
+
+```bash
+# ✅ 函数命名：首字母大写 + 下划线
+function Main() {
+    Initialize_Environment
+    Process_Data "$INPUT_FILE"
+}
+
+function Process_Data() {
+    local input_file="$1"      # 局部变量小写
+    local line_count=0
+    # ...
+}
+
+# ❌ 避免 Google 风格的小写函数名
+process_data() { }             # Google 风格，本项目不用
+```
+
+## 必需结构
+
+### Main 函数入口（关键差异）
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 全局变量
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 业务函数（首字母大写）
+function Initialize_Config() {
+    local config_file="$1"
+    # 所有变量必须 local
+    local result=""
+}
+
+function Process_Data() {
+    local input="$1"
+}
+
+# ✅ 必须：Main 函数作为入口
+function Main() {
+    Initialize_Config "$CONFIG_FILE"
+    Process_Data "$@"
+}
+
+# 程序启动
+Main "$@"
+```
+
+## 模块化组织
+
+**小型脚本 (<500 行)**: 单文件 + 函数分组（按功能用注释分隔）
+
+**大型项目**: 按文件分模块
+
+```bash
+project/
+├── main.sh              # 主入口，包含 Main() 函数
+├── lib/
+│   ├── config.sh        # function Load_Config() {}
+│   ├── logger.sh        # function Log_Info() {}
+│   └── processor.sh     # function Process_Data() {}
+└── config/
+
+# main.sh
+source "${SCRIPT_DIR}/lib/logger.sh"
+source "${SCRIPT_DIR}/lib/config.sh"
+
+function Main() {
+    Load_Config "$CONFIG_FILE"
+    Process_Data "$@"
+}
+
+Main "$@"
+```
+
+## 关键决策点
+
+**Q: 为什么函数名要首字母大写？**  
+A: 与小写的局部变量和命令区分，代码中一眼识别函数调用。
+
+**Q: 为什么必须用 Main 函数？**  
+A: 统一入口，便于理解执行流程，方便测试和模块化。
+
+**Q: 何时拆分多文件？**  
+A: 超过 500 行或有清晰的功能模块划分（logger、config、processor 等）。
+
+## 工具
+
+- **ShellCheck**: 静态分析工具
+- **shfmt**: 代码格式化（推荐 2 空格缩进）
+
+## 扩展阅读
+
+- [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html) - 基础规范
+- [ShellCheck Wiki](https://github.com/koalaman/shellcheck/wiki) - 最佳实践
+- [Bash Reference Manual](https://www.gnu.org/software/bash/manual/) - 官方文档
