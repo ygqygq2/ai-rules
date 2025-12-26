@@ -2,7 +2,7 @@
 id: 1304
 title: Code Review Skills
 description: Effective code review practices and guidelines
-globs: ['**/*']
+globs: ["**/*"]
 priority: medium
 tags: [code-review, skills, best-practices, collaboration]
 version: 1.0.0
@@ -14,281 +14,143 @@ lastUpdated: 2025-12-18
 
 ## Review Objectives
 
-1. **Find Defects**: Identify bugs, logic errors, edge cases
-2. **Ensure Quality**: Check code style, readability, maintainability
-3. **Share Knowledge**: Learn from others, teach best practices
-4. **Maintain Standards**: Enforce team conventions and patterns
+1. **Find Defects**: 识别 bug、逻辑错误、边界情况
+2. **Ensure Quality**: 代码风格、可读性、可维护性
+3. **Share Knowledge**: 学习和教授最佳实践
+4. **Maintain Standards**: 强制团队约定和模式
 
 ## Review Checklist
 
-### Functionality
-
-- [ ] Code does what it's supposed to do
-- [ ] Edge cases are handled
-- [ ] Error conditions are caught and handled
-- [ ] No obvious bugs or logic errors
-- [ ] Tests are included and passing
-
-### Design & Architecture
-
-- [ ] Follows SOLID principles
-- [ ] No unnecessary complexity
-- [ ] Proper separation of concerns
-- [ ] Consistent with existing patterns
-- [ ] Appropriate use of design patterns
-
-### Code Quality
-
-- [ ] Follows style guide and conventions
-- [ ] Meaningful names (variables, functions, classes)
-- [ ] Functions are small and focused (< 50 lines)
-- [ ] No code duplication (DRY principle)
-- [ ] Comments explain "why", not "what"
-
-### Security
-
-- [ ] User input is validated
-- [ ] No SQL injection vulnerabilities
-- [ ] No XSS vulnerabilities
-- [ ] Sensitive data is not exposed
-- [ ] Authentication and authorization are correct
-
-### Performance
-
-- [ ] No obvious performance issues
-- [ ] Database queries are optimized
-- [ ] No memory leaks
-- [ ] Appropriate use of caching
-- [ ] Async operations where beneficial
-
-### Testing
-
-- [ ] Unit tests cover main scenarios
-- [ ] Edge cases are tested
-- [ ] Tests are clear and maintainable
-- [ ] Integration tests if needed
-- [ ] Test coverage is adequate (> 80%)
+- [ ] 功能正确、边界处理、错误处理、测试通过
+- [ ] 设计：SOLID 原则、分离关注点、模式一致性
+- [ ] 代码质量：风格一致、命名有意义、函数 < 50 行、无重复、注释说"为什么"
+- [ ] 安全：输入验证、SQL 注入、XSS、敏感数据、认证授权
+- [ ] 性能：无明显瓶颈、查询优化、缓存、异步操作
+- [ ] 测试：单元测试、边界测试、覆盖率 > 80%
 
 ## Review Etiquette
 
-### As a Reviewer
-
-**DO:**
-
-- ✅ Be respectful and constructive
-- ✅ Explain reasoning behind suggestions
-- ✅ Acknowledge good work
-- ✅ Ask questions, don't make demands
-- ✅ Provide examples and alternatives
-- ✅ Focus on code, not the person
-
-**Example Comments:**
+### 评论模板
 
 ```
-✅ Good: "Consider using a Map here instead of an object for O(1) lookups.
-This will improve performance when the dataset grows."
+✅ Good: "Consider using a Map here for O(1) lookups. This will improve
+performance when the dataset grows."
 
 ❌ Bad: "This is slow. Use a Map."
 
-✅ Good: "I see you're handling the error here. Could we also log it for
-debugging purposes? Something like: logger.error('Failed to fetch', error)"
+✅ Good: "I see you're handling the error here. Could we also log it?
+logger.error('Failed to fetch', error)"
 
 ❌ Bad: "You forgot to log the error."
-
-✅ Good: "Great approach! The use of the strategy pattern here makes this
-very maintainable. One minor suggestion: could we extract this constant?"
-
-❌ Bad: "Extract this constant."
 ```
 
-**DON'T:**
-
-- ❌ Nitpick on personal preferences
-- ❌ Be vague ("this looks wrong")
-- ❌ Review too quickly without understanding
-- ❌ Approve without actually reading
-- ❌ Block on non-critical issues
-
-### As an Author
-
-**DO:**
-
-- ✅ Provide context in PR description
-- ✅ Keep PRs small and focused
-- ✅ Respond to all comments
-- ✅ Be open to feedback
-- ✅ Ask for clarification if needed
-- ✅ Thank reviewers for their time
-
-**DON'T:**
-
-- ❌ Take feedback personally
-- ❌ Argue defensively
-- ❌ Ignore comments
-- ❌ Submit massive PRs
-- ❌ Mark comments as resolved without discussion
-
-## Efficient Review Process
-
-### 1. Pre-Review (Author)
-
-```markdown
-## PR Description Template
-
-### What
-
-Brief description of the change
-
-### Why
-
-Business reason or technical motivation
-
-### How
-
-High-level approach taken
-
-### Testing
-
-How to test this change
-
-### Screenshots
-
-For UI changes
-
-### Checklist
-
-- [ ] Tests added/updated
-- [ ] Documentation updated
-- [ ] Breaking changes documented
-- [ ] Backward compatible
-```
-
-### 2. Review Strategy
+### 评论前缀
 
 ```typescript
-// Start with high-level review
-// 1. Understand the purpose
-// 2. Check overall design
-// 3. Then dive into details
+// [BLOCKER] - 必须修复
+// [SUGGESTION] - 可选建议
+// [QUESTION] - 需要澄清
+// [NITPICK] - 小样式问题
+// [PRAISE] - 认可好的工作
 
-// Use a systematic approach
-function reviewCode(pr: PullRequest) {
-  // First pass: Architecture and design
-  checkDesign(pr);
-
-  // Second pass: Logic and correctness
-  checkLogic(pr);
-
-  // Third pass: Style and conventions
-  checkStyle(pr);
-
-  // Final pass: Tests and documentation
-  checkTests(pr);
-}
-```
-
-### 3. Comment Types
-
-```typescript
-// Use comment prefixes for clarity
-// [BLOCKER] - Must be fixed before merge
-// [SUGGESTION] - Nice to have, author decides
-// [QUESTION] - Need clarification
-// [NITPICK] - Minor style issue
-// [PRAISE] - Acknowledge good work
-
-// Example:
-// [BLOCKER] This will cause a null pointer exception when user is undefined.
-// Need to add a null check before accessing user.name.
+// 示例:
+// [BLOCKER] This will cause null pointer exception when user is undefined.
+// Need null check before accessing user.name.
 
 // [SUGGESTION] Consider extracting this logic into a separate function
 // for better testability.
+```
 
-// [QUESTION] I'm not familiar with this pattern. Could you explain why
-// you chose this approach?
+## PR Description Template
 
-// [NITPICK] Missing semicolon (auto-fixable by linter)
+```markdown
+## What
 
-// [PRAISE] Excellent error handling! The error messages are very clear.
+简要描述变更
+
+## Why
+
+业务原因或技术动机
+
+## How
+
+高层实现方法
+
+## Testing
+
+如何测试此变更
+
+## Checklist
+
+- [ ] 测试已添加/更新
+- [ ] 文档已更新
+- [ ] Breaking changes 已记录
+- [ ] 向后兼容
 ```
 
 ## Common Review Patterns
 
-### Check for Proper Error Handling
+### 错误处理检查
 
 ```typescript
-// ❌ Bad: Silent failure
+// ❌ 静默失败
 async function fetchData() {
   try {
     return await api.getData();
   } catch {
-    return null; // Error swallowed
+    return null; // 错误被吞没
   }
 }
 
-// ✅ Good: Proper error handling
+// ✅ 正确错误处理
 async function fetchData() {
   try {
     return await api.getData();
   } catch (error) {
-    logger.error('Failed to fetch data', { error });
-    throw new DataFetchError('Unable to retrieve data', { cause: error });
+    logger.error("Failed to fetch data", { error });
+    throw new DataFetchError("Unable to retrieve data", { cause: error });
   }
 }
 ```
 
-### Check for Edge Cases
+### 边界情况检查
 
 ```typescript
-// ❌ Bad: Doesn't handle edge cases
+// ❌ 未处理边界情况
 function getFirstName(fullName: string): string {
-  return fullName.split(' ')[0];
+  return fullName.split(" ")[0];
 }
 
-// ✅ Good: Handles edge cases
+// ✅ 处理边界情况
 function getFirstName(fullName: string): string {
-  if (!fullName || typeof fullName !== 'string') {
-    return '';
-  }
-
+  if (!fullName || typeof fullName !== "string") return "";
   const trimmed = fullName.trim();
-  if (!trimmed) {
-    return '';
-  }
-
+  if (!trimmed) return "";
   return trimmed.split(/\s+/)[0];
 }
 ```
 
-### Check for Performance Issues
+### 性能问题检查
 
 ```typescript
-// ❌ Bad: O(n²) complexity
+// ❌ O(n²) 复杂度
 function findDuplicates(items: string[]): string[] {
-  const duplicates: string[] = [];
-  for (const item of items) {
-    if (items.filter((i) => i === item).length > 1) {
-      duplicates.push(item);
-    }
-  }
-  return duplicates;
+  return items.filter((item, index) => items.indexOf(item) !== index);
 }
 
-// ✅ Good: O(n) complexity
+// ✅ O(n) 复杂度
 function findDuplicates(items: string[]): string[] {
-  const counts = new Map<string, number>();
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
   for (const item of items) {
-    counts.set(item, (counts.get(item) || 0) + 1);
+    if (seen.has(item)) duplicates.add(item);
+    seen.add(item);
   }
-  return Array.from(counts.entries())
-    .filter(([_, count]) => count > 1)
-    .map(([item]) => item);
+  return Array.from(duplicates);
 }
 ```
 
-## Automated Review Tools
-
-### Use Linters and Formatters
+## Automated Tools
 
 ```json
 {
@@ -296,51 +158,16 @@ function findDuplicates(items: string[]): string[] {
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   }
 }
 ```
 
-### CI/CD Checks
-
-```yaml
-# .github/workflows/pr-checks.yml
-name: PR Checks
-on: pull_request
-
-jobs:
-  quality:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: npm install
-      - run: npm run lint
-      - run: npm run type-check
-      - run: npm run test
-      - run: npm run build
-```
-
-### Code Coverage
-
-```bash
-# Ensure coverage doesn't decrease
-npm run test:coverage
-# Fail if coverage < 80%
-```
-
 ## Review Metrics
 
-Track these to improve review process:
-
-- **Review turnaround time**: < 4 hours for small PRs
-- **PR size**: < 400 lines changed
-- **Comments per PR**: 0-5 substantive comments
-- **Back-and-forth iterations**: < 3 rounds
-- **Time to merge**: < 24 hours for most PRs
-
-## Resources
-
-- Google's Code Review Guidelines
-- GitHub Pull Request Best Practices
-- The Art of Code Review (book)
-- Code Review Checklist Templates
+- **Review 周转时间**: 小 PR < 4 小时
+- **PR 大小**: < 400 行变更
+- **评论数**: 0-5 条实质性评论
+- **来回次数**: < 3 轮
+- **合并时间**: 大多数 PR < 24 小时

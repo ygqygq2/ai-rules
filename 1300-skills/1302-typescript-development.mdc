@@ -2,7 +2,7 @@
 id: 1302
 title: TypeScript Development Skills
 description: TypeScript development best practices and advanced patterns
-globs: ['**/*.ts', '**/*.tsx']
+globs: ["**/*.ts", "**/*.tsx"]
 priority: medium
 tags: [typescript, skills, development, best-practices]
 version: 1.0.0
@@ -12,129 +12,83 @@ lastUpdated: 2025-12-18
 
 # TypeScript Development Skills
 
-## Core Competencies
+## 核心能力
 
-### 1. Type System Mastery
+### 类型系统
 
 ```typescript
-// Union and Intersection Types
-type Status = 'pending' | 'approved' | 'rejected';
+// Union 和 Intersection
+type Status = "pending" | "approved" | "rejected";
 type User = { name: string } & { id: number };
 
-// Generics
+// 泛型
 function identity<T>(value: T): T {
   return value;
 }
 
-// Utility Types
-type Partial<T> = { [P in keyof T]?: T[P] };
-type ReadonlyDeep<T> = { readonly [P in keyof T]: ReadonlyDeep<T[P]> };
-
-// Conditional Types
+// 条件类型
 type IsString<T> = T extends string ? true : false;
-
-// Mapped Types
-type Optional<T> = {
-  [P in keyof T]?: T[P];
-};
 ```
 
-### 2. Advanced Patterns
-
-#### Discriminated Unions
+### Discriminated Unions
 
 ```typescript
-type Success = {
-  status: 'success';
-  data: any;
-};
-
-type Error = {
-  status: 'error';
-  message: string;
-};
-
+type Success = { status: "success"; data: any };
+type Error = { status: "error"; message: string };
 type Result = Success | Error;
 
 function handleResult(result: Result) {
-  if (result.status === 'success') {
-    // TypeScript knows result is Success here
-    console.log(result.data);
+  if (result.status === "success") {
+    console.log(result.data); // TypeScript 知道是 Success
   } else {
-    // TypeScript knows result is Error here
-    console.error(result.message);
+    console.error(result.message); // TypeScript 知道是 Error
   }
 }
 ```
 
-#### Type Guards
+### Type Guards
 
 ```typescript
 function isString(value: unknown): value is string {
-  return typeof value === 'string';
-}
-
-function processValue(value: unknown) {
-  if (isString(value)) {
-    // value is string here
-    return value.toUpperCase();
-  }
-  return null;
+  return typeof value === "string";
 }
 ```
 
-### 3. Async Patterns
+### 异步模式
 
 ```typescript
-// Promise with proper error handling
 async function fetchData<T>(url: string): Promise<T> {
   try {
     const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return (await response.json()) as T;
   } catch (error) {
-    console.error('Fetch failed:', error);
+    console.error("Fetch failed:", error);
     throw error;
   }
 }
 
-// Concurrent requests
-async function fetchMultiple<T>(urls: string[]): Promise<T[]> {
-  const results = await Promise.all(urls.map((url) => fetchData<T>(url)));
-  return results;
-}
+// 并发请求
+await Promise.all(urls.map((url) => fetchData<T>(url)));
 ```
 
-### 4. Module Organization
+### 模块组织
 
 ```typescript
-// Use barrel exports (index.ts)
-export * from './types';
-export * from './utils';
-export { default as MyComponent } from './MyComponent';
+// 使用 barrel exports (index.ts)
+export * from "./types";
+export { DataService } from "./DataService";
 
-// Named exports preferred over default
-export class DataService {
-  async getData(): Promise<Data> {
-    // implementation
-  }
-}
-
-// Use path aliases (@/ for src/)
-import { DataService } from '@/services/DataService';
+// 路径别名
+import { DataService } from "@/services/DataService";
 ```
 
-### 5. Configuration Best Practices
+## tsconfig.json 配置
 
 ```json
 {
   "compilerOptions": {
     "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
@@ -144,68 +98,33 @@ import { DataService } from '@/services/DataService';
 }
 ```
 
-## Testing with TypeScript
-
-### Unit Tests
+## 测试
 
 ```typescript
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from "vitest";
 
-describe('DataService', () => {
-  let service: DataService;
-
-  beforeEach(() => {
-    service = new DataService();
-  });
-
-  it('should fetch data successfully', async () => {
+describe("DataService", () => {
+  it("should fetch data", async () => {
     const data = await service.getData();
     expect(data).toBeDefined();
-    expect(data.items).toHaveLength(0);
-  });
-
-  it('should handle errors gracefully', async () => {
-    await expect(service.getData()).rejects.toThrow('Network error');
   });
 });
 ```
 
-### Type Testing
+## 性能提示
 
-```typescript
-import { expectType } from 'tsd';
+1. 使用 const assertions: `const data = { x: 10 } as const;`
+2. 启用增量编译: `incremental: true`
+3. 优化导入: 直接导入而非 barrel exports（大项目）
 
-// Test that types are correct
-expectType<string>(identity('hello'));
-expectType<number>(identity(42));
-```
+## 常见陷阱
 
-## Performance Tips
+- 避免 `any`，使用 `unknown`
+- 避免 `!` 非空断言，使用 null 检查
+- `Object.keys()` 返回 `string[]`，非 `keyof T`
 
-1. **Use const assertions**: `const data = { x: 10 } as const;`
-2. **Avoid excessive type checks**: Trust TypeScript, don't validate types at runtime
-3. **Use incremental compilation**: Enable `incremental: true` in tsconfig
-4. **Optimize imports**: Use direct imports instead of barrel exports in large projects
-5. **Enable project references**: For monorepo projects
+## 工具
 
-## Common Pitfalls
-
-1. **Any type abuse**: Use `unknown` instead of `any` when type is truly unknown
-2. **Non-null assertions**: Avoid `!` operator, use proper null checks
-3. **Type assertions**: Use sparingly, prefer type guards
-4. **Enum limitations**: Consider string literal unions instead
-5. **Object.keys() type**: Returns `string[]`, not `keyof T`
-
-## Tools and Ecosystem
-
-- **ESLint**: Use @typescript-eslint for linting
-- **Prettier**: Format code consistently
-- **ts-node**: Run TypeScript directly
-- **tsx**: Fast TypeScript execution
-- **Vitest**: Unit testing framework with TypeScript support
-
-## Resources
-
-- TypeScript Handbook: Official documentation
-- Type Challenges: Practice advanced types
-- DefinitelyTyped: Type definitions repository
+- ESLint + @typescript-eslint
+- Prettier
+- Vitest

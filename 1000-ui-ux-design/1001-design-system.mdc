@@ -16,136 +16,25 @@ lastUpdated: 2025-11-20
 
 - 设计系统构建
 - 组件库开发
-- 设计规范制定
 - 多产品统一体验
-- 设计与开发协作
-- 无障碍访问设计
 
 ## 核心内容
 
-设计系统的核心最佳实践，涵盖设计令牌、组件库、文档、版本管理、可访问性等方面。
+设计令牌化、原子设计组件架构、可访问性内建（WCAG 2.1 AA）、主题化支持。
 
 ## 关键原则
 
 - ✅ 组件化和模块化
 - ✅ 一致性优先
 - ✅ 可访问性内建
-- ✅ 响应式设计
-- ✅ 文档驱动开发
 - ✅ 原子设计方法
 - ✅ 设计令牌化
 
-## 设计令牌（Design Tokens）
+## 关键决策点
 
-- 定义基础设计变量
-- 使用语义化命名
-- 多平台支持
-- 版本控制
-- 主题化支持
-- 自动生成工具
+### 1. 设计令牌结构
 
-**设计令牌示例：**
-
-```json
-// tokens/colors.json
-{
-  "color": {
-    "brand": {
-      "primary": {
-        "value": "#0066CC",
-        "type": "color",
-        "description": "主品牌色"
-      },
-      "secondary": {
-        "value": "#6C757D",
-        "type": "color"
-      }
-    },
-    "semantic": {
-      "success": {
-        "value": "#28A745",
-        "type": "color"
-      },
-      "error": {
-        "value": "#DC3545",
-        "type": "color"
-      },
-      "warning": {
-        "value": "#FFC107",
-        "type": "color"
-      },
-      "info": {
-        "value": "#17A2B8",
-        "type": "color"
-      }
-    },
-    "neutral": {
-      "50": { "value": "#F8F9FA", "type": "color" },
-      "100": { "value": "#E9ECEF", "type": "color" },
-      "200": { "value": "#DEE2E6", "type": "color" },
-      "300": { "value": "#CED4DA", "type": "color" },
-      "400": { "value": "#ADB5BD", "type": "color" },
-      "500": { "value": "#6C757D", "type": "color" },
-      "600": { "value": "#495057", "type": "color" },
-      "700": { "value": "#343A40", "type": "color" },
-      "800": { "value": "#212529", "type": "color" },
-      "900": { "value": "#000000", "type": "color" }
-    }
-  }
-}
-
-// tokens/spacing.json
-{
-  "spacing": {
-    "xs": { "value": "4px", "type": "dimension" },
-    "sm": { "value": "8px", "type": "dimension" },
-    "md": { "value": "16px", "type": "dimension" },
-    "lg": { "value": "24px", "type": "dimension" },
-    "xl": { "value": "32px", "type": "dimension" },
-    "2xl": { "value": "48px", "type": "dimension" },
-    "3xl": { "value": "64px", "type": "dimension" }
-  }
-}
-
-// tokens/typography.json
-{
-  "font": {
-    "family": {
-      "base": {
-        "value": "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-        "type": "fontFamily"
-      },
-      "heading": {
-        "value": "'Poppins', sans-serif",
-        "type": "fontFamily"
-      },
-      "mono": {
-        "value": "'Fira Code', monospace",
-        "type": "fontFamily"
-      }
-    },
-    "size": {
-      "xs": { "value": "12px", "type": "dimension" },
-      "sm": { "value": "14px", "type": "dimension" },
-      "base": { "value": "16px", "type": "dimension" },
-      "lg": { "value": "18px", "type": "dimension" },
-      "xl": { "value": "20px", "type": "dimension" },
-      "2xl": { "value": "24px", "type": "dimension" },
-      "3xl": { "value": "30px", "type": "dimension" },
-      "4xl": { "value": "36px", "type": "dimension" }
-    },
-    "weight": {
-      "light": { "value": "300", "type": "number" },
-      "normal": { "value": "400", "type": "number" },
-      "medium": { "value": "500", "type": "number" },
-      "semibold": { "value": "600", "type": "number" },
-      "bold": { "value": "700", "type": "number" }
-    }
-  }
-}
-```
-
-**令牌转换工具（Style Dictionary）：**
+**使用 Style Dictionary 多平台转换：**
 
 ```javascript
 // build-tokens.js
@@ -154,592 +43,98 @@ const StyleDictionary = require("style-dictionary");
 const config = {
   source: ["tokens/**/*.json"],
   platforms: {
-    css: {
-      transformGroup: "css",
-      buildPath: "build/css/",
-      files: [
-        {
-          destination: "variables.css",
-          format: "css/variables",
-        },
-      ],
-    },
-    scss: {
-      transformGroup: "scss",
-      buildPath: "build/scss/",
-      files: [
-        {
-          destination: "_variables.scss",
-          format: "scss/variables",
-        },
-      ],
-    },
-    js: {
-      transformGroup: "js",
-      buildPath: "build/js/",
-      files: [
-        {
-          destination: "tokens.js",
-          format: "javascript/es6",
-        },
-      ],
-    },
-    tailwind: {
-      transformGroup: "js",
-      buildPath: "build/tailwind/",
-      files: [
-        {
-          destination: "theme.js",
-          format: "javascript/es6",
-          filter: (token) => token.attributes.category !== "asset",
-        },
-      ],
-    },
+    css: { transformGroup: "css", files: [{ destination: "variables.css" }] },
+    tailwind: { transformGroup: "js", files: [{ destination: "theme.js" }] },
   },
 };
 
 StyleDictionary.extend(config).buildAllPlatforms();
 ```
 
-## 组件架构
-
-- 原子设计方法（Atomic Design）
-- 组件分层：Atoms → Molecules → Organisms → Templates → Pages
-- 组件单一职责
-- Props 设计
-- 组合优于继承
-- 受控与非受控组件
-
-**原子设计层级：**
-
-```
-Atoms (原子)
-├── Button
-├── Input
-├── Label
-├── Icon
-└── Badge
-
-Molecules (分子)
-├── FormField (Label + Input)
-├── SearchBox (Input + Icon + Button)
-└── Card Header (Icon + Text + Badge)
-
-Organisms (有机体)
-├── Form (多个 FormField)
-├── Navigation Bar
-└── Product Card
-
-Templates (模板)
-├── Dashboard Layout
-├── Article Layout
-└── Settings Layout
-
-Pages (页面)
-├── Home Page
-├── Product List Page
-└── User Profile Page
-```
-
-**组件示例：**
+### 2. 组件变体管理（CVA）
 
 ```typescript
-// atoms/Button.tsx
 import { cva, type VariantProps } from "class-variance-authority";
-import { forwardRef } from "react";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        primary: "bg-primary text-white hover:bg-primary-dark",
-        secondary: "bg-secondary text-white hover:bg-secondary-dark",
-        outline: "border-2 border-primary text-primary hover:bg-primary hover:text-white",
-        ghost: "hover:bg-gray-100 text-gray-700",
-        danger: "bg-red-600 text-white hover:bg-red-700",
-      },
-      size: {
-        sm: "h-9 px-3 text-sm",
-        md: "h-10 px-4 text-base",
-        lg: "h-11 px-6 text-lg",
-        icon: "h-10 w-10",
-      },
+const buttonVariants = cva("inline-flex items-center rounded-md disabled:opacity-50", {
+  variants: {
+    variant: {
+      primary: "bg-primary text-white hover:bg-primary-dark",
+      outline: "border-2 border-primary hover:bg-primary hover:text-white",
     },
-    defaultVariants: {
-      variant: "primary",
-      size: "md",
-    },
-  }
-);
-
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
-  loading?: boolean;
-}
-
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, loading, children, ...props }, ref) => {
-    return (
-      <button
-        className={buttonVariants({ variant, size, className })}
-        ref={ref}
-        disabled={loading || props.disabled}
-        {...props}
-      >
-        {loading && <Spinner className="mr-2" />}
-        {children}
-      </button>
-    );
-  }
-);
-
-Button.displayName = "Button";
-
-export { Button, buttonVariants };
-
-// molecules/FormField.tsx
-interface FormFieldProps {
-  label: string;
-  error?: string;
-  required?: boolean;
-  children: React.ReactNode;
-}
-
-export function FormField({ label, error, required, children }: FormFieldProps) {
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </label>
-      {children}
-      {error && (
-        <p className="text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// organisms/LoginForm.tsx
-export function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // 验证和提交逻辑
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="邮箱" error={errors.email} required>
-        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" />
-      </FormField>
-
-      <FormField label="密码" error={errors.password} required>
-        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
-      </FormField>
-
-      <Button type="submit" className="w-full">
-        登录
-      </Button>
-    </form>
-  );
-}
+    size: { sm: "h-9 px-3", md: "h-10 px-4" },
+  },
+  defaultVariants: { variant: "primary", size: "md" },
+});
 ```
 
-## 可访问性（Accessibility）
-
-- WCAG 2.1 AA 级别遵从
-- 语义化 HTML
-- ARIA 属性使用
-- 键盘导航
-- 屏幕阅读器支持
-- 色彩对比度
-- 焦点管理
-
-**可访问性实践：**
+### 3. 可访问性实现
 
 ```typescript
-// 可访问的模态框组件
 export function Dialog({ open, onClose, title, children }: DialogProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  // 焦点陷阱
   useEffect(() => {
-    if (open) {
-      const firstFocusable = dialogRef.current?.querySelector(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      ) as HTMLElement;
-      firstFocusable?.focus();
-    }
-  }, [open]);
-
-  // ESC 键关闭
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
-        onClose();
-      }
-    };
+    if (!open) return;
+    const firstFocusable = dialogRef.current?.querySelector('button, [href]') as HTMLElement;
+    firstFocusable?.focus();
+    
+    const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open, onClose]);
 
-  if (!open) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="dialog-title"
-    >
-      {/* 背景遮罩 */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
-
-      {/* 对话框内容 */}
-      <div ref={dialogRef} className="relative bg-white rounded-lg p-6 max-w-md w-full">
-        <h2 id="dialog-title" className="text-xl font-bold mb-4">
-          {title}
-        </h2>
-
-        <div className="mb-4">{children}</div>
-
-        <button onClick={onClose} className="absolute top-4 right-4" aria-label="关闭对话框">
-          <Icon name="close" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// 可访问的下拉菜单
-export function Dropdown({ trigger, items }: DropdownProps) {
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  return (
-    <div className="relative">
-      <button onClick={() => setOpen(!open)} aria-haspopup="true" aria-expanded={open}>
-        {trigger}
-      </button>
-
-      {open && (
-        <div ref={menuRef} role="menu" className="absolute mt-2 bg-white shadow-lg rounded-md">
-          {items.map((item, index) => (
-            <button
-              key={index}
-              role="menuitem"
-              tabIndex={0}
-              onClick={() => {
-                item.onClick();
-                setOpen(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  item.onClick();
-                  setOpen(false);
-                }
-              }}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <div role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <h2 id="dialog-title">{title}</h2>
+    {children}
+  </div>;
 }
 ```
 
-## 响应式设计
-
-- 移动优先设计
-- 断点定义
-- 流式布局
-- 灵活的图片和媒体
-- 触摸友好
-- 性能优化
-
-**响应式断点：**
-
-```javascript
-// tailwind.config.js
-module.exports = {
-  theme: {
-    screens: {
-      xs: "375px",
-      sm: "640px",
-      md: "768px",
-      lg: "1024px",
-      xl: "1280px",
-      "2xl": "1536px",
-    },
-  },
-};
-
-// 响应式组件示例
-export function ResponsiveGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">{children}</div>;
-}
-
-export function ResponsiveNavigation() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  return (
-    <nav>
-      {/* 桌面导航 */}
-      <div className="hidden md:flex space-x-4">
-        <a href="/">首页</a>
-        <a href="/about">关于</a>
-        <a href="/contact">联系</a>
-      </div>
-
-      {/* 移动端汉堡菜单 */}
-      <button className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="切换菜单">
-        <Icon name={mobileMenuOpen ? "close" : "menu"} />
-      </button>
-
-      {/* 移动端菜单 */}
-      {mobileMenuOpen && (
-        <div className="md:hidden">
-          <a href="/" className="block py-2">
-            首页
-          </a>
-          <a href="/about" className="block py-2">
-            关于
-          </a>
-          <a href="/contact" className="block py-2">
-            联系
-          </a>
-        </div>
-      )}
-    </nav>
-  );
-}
-```
-
-## 文档和 Storybook
-
-- 组件文档
-- 使用示例
-- Props API 文档
-- 交互式演示
-- 设计指南
-- 代码片段
-
-**Storybook 示例：**
+### 4. 主题切换
 
 ```typescript
-// Button.stories.tsx
-import type { Meta, StoryObj } from "@storybook/react";
-import { Button } from "./Button";
-
-const meta: Meta<typeof Button> = {
-  title: "Components/Button",
-  component: Button,
-  tags: ["autodocs"],
-  argTypes: {
-    variant: {
-      control: "select",
-      options: ["primary", "secondary", "outline", "ghost", "danger"],
-    },
-    size: {
-      control: "select",
-      options: ["sm", "md", "lg", "icon"],
-    },
-    loading: {
-      control: "boolean",
-    },
-    disabled: {
-      control: "boolean",
-    },
-  },
-};
-
-export default meta;
-type Story = StoryObj<typeof Button>;
-
-export const Primary: Story = {
-  args: {
-    variant: "primary",
-    children: "Primary Button",
-  },
-};
-
-export const Secondary: Story = {
-  args: {
-    variant: "secondary",
-    children: "Secondary Button",
-  },
-};
-
-export const Loading: Story = {
-  args: {
-    loading: true,
-    children: "Loading...",
-  },
-};
-
-export const Sizes: Story = {
-  render: () => (
-    <div className="flex gap-4 items-center">
-      <Button size="sm">Small</Button>
-      <Button size="md">Medium</Button>
-      <Button size="lg">Large</Button>
-    </div>
-  ),
-};
-
-export const Variants: Story = {
-  render: () => (
-    <div className="flex gap-4">
-      <Button variant="primary">Primary</Button>
-      <Button variant="secondary">Secondary</Button>
-      <Button variant="outline">Outline</Button>
-      <Button variant="ghost">Ghost</Button>
-      <Button variant="danger">Danger</Button>
-    </div>
-  ),
-};
-```
-
-## 主题化
-
-- CSS 变量
-- 暗黑模式
-- 多主题支持
-- 主题切换
-- 运行时主题更新
-- 主题继承
-
-**主题化实现：**
-
-```css
-/* themes/light.css */
-:root {
-  --color-background: #ffffff;
-  --color-foreground: #000000;
-  --color-primary: #0066cc;
-  --color-secondary: #6c757d;
-  --color-border: #dee2e6;
-  --color-input: #ffffff;
-  --color-card: #ffffff;
-}
-
-/* themes/dark.css */
-[data-theme="dark"] {
-  --color-background: #1a1a1a;
-  --color-foreground: #ffffff;
-  --color-primary: #4d9fff;
-  --color-secondary: #8b95a0;
-  --color-border: #333333;
-  --color-input: #2a2a2a;
-  --color-card: #252525;
-}
-```
-
-```typescript
-// ThemeProvider.tsx
-import { createContext, useContext, useEffect, useState } from "react";
-
-type Theme = "light" | "dark" | "system";
-
-interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("system");
-
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
-
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      root.classList.add(systemTheme);
-      root.setAttribute("data-theme", systemTheme);
-    } else {
-      root.classList.add(theme);
-      root.setAttribute("data-theme", theme);
-    }
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    root.setAttribute("data-theme", theme === "system" ? systemTheme : theme);
   }, [theme]);
-
   return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
-}
-
-export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within ThemeProvider");
-  }
-  return context;
-}
-
-// ThemeToggle.tsx
-export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-
-  return (
-    <button onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="切换主题">
-      {theme === "light" ? <MoonIcon /> : <SunIcon />}
-    </button>
-  );
 }
 ```
 
-## 版本管理
+### 5. Storybook 文档
 
-- 语义化版本
-- 变更日志
-- 迁移指南
-- 弃用警告
-- 向后兼容
-- 发布流程
+```typescript
+const meta: Meta<typeof Button> = {
+  component: Button,
+  tags: ["autodocs"], // 自动生成文档
+};
+```
 
-## 工具配置
-
-**推荐工具栈：**
+## 项目特定配置
 
 ```json
 {
   "devDependencies": {
     "@storybook/react": "^7.0.0",
     "style-dictionary": "^3.8.0",
-    "figma-api": "^1.11.0",
-    "chromatic": "^6.0.0",
-    "axe-core": "^4.7.0",
-    "@testing-library/react": "^14.0.0",
-    "tailwindcss": "^3.3.0",
     "class-variance-authority": "^0.7.0",
-    "clsx": "^2.0.0"
+    "axe-core": "^4.7.0"
   }
 }
 ```
 
 ## 常见问题
 
-**Q: 如何在 Figma 和代码之间同步设计令牌？**
-A: 使用 Figma API 或 Tokens Studio 插件自动同步。
+**Q: 如何同步 Figma 和代码设计令牌？**
+A: 使用 Figma API 或 Tokens Studio 插件 + Style Dictionary。
 
-**Q: 如何确保组件库的可访问性？**
-A: 集成 axe-core 进行自动化测试，定期进行手动审查。
+**Q: 如何确保可访问性？**
+A: 集成 axe-core 自动化测试 + 手动审查焦点管理。
 
 ## 扩展阅读
 
-- [Atomic Design - Brad Frost](https://atomicdesign.bradfrost.com/)
-- [Design Tokens W3C Community Group](https://design-tokens.github.io/community-group/)
-- [Storybook 官方文档](https://storybook.js.org/)
-- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [Atomic Design](https://atomicdesign.bradfrost.com/)
+- [Design Tokens W3C](https://design-tokens.github.io/community-group/)
+- [WCAG 2.1](https://www.w3.org/WAI/WCAG21/quickref/)

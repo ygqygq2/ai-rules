@@ -14,489 +14,132 @@ lastUpdated: 2025-11-20
 
 ## 适用场景
 
-- Docker 容器化应用
-- 微服务部署
-- 开发环境标准化
-- CI/CD 流程
-- 应用打包和分发
-- 多环境部署
+- Docker 容器化应用、微服务部署、多环境部署
 
 ## 核心内容
 
-Docker 容器化的核心最佳实践，涵盖 Dockerfile 编写、镜像优化、容器编排、安全配置等方面。
+多阶段构建、镜像优化、.dockerignore、环境变量、Docker Compose。
 
 ## 关键原则
 
 - ✅ 使用官方基础镜像
-- ✅ 最小化镜像层数
-- ✅ 使用多阶段构建
+- ✅ 多阶段构建减小镜像
+- ✅ 使用 .dockerignore
 - ✅ 不在镜像中存储秘密
-- ✅ 使用 .dockerignore 排除文件
-- ✅ 指定明确的镜像标签
-- ✅ 一个容器一个进程
+- ✅ 指定明确标签
+- ✅ 一容器一进程
 
-## Dockerfile 最佳实践
+## 关键决策点
 
-- 使用官方基础镜像
-- 选择合适的基础镜像大小
-- 合并 RUN 指令减少层数
-- 按变化频率排序指令
-- 使用 COPY 而非 ADD
-- 清理不必要的文件
-
-**Dockerfile 示例：**
-
-```dockerfile
-# ✅ 使用官方镜像和明确版本
-FROM node:18-alpine AS builder
-
-# 设置工作目录
-WORKDIR /app
-
-# 复制依赖文件（利用缓存）
-COPY package*.json ./
-
-# 安装依赖
-RUN npm ci --only=production && \
-    npm cache clean --force
-
-# 复制应用代码
-COPY . .
-
-# 构建应用
-RUN npm run build
-
-# 生产阶段
-FROM node:18-alpine
-
-WORKDIR /app
-
-# 创建非 root 用户
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
-# 从构建阶段复制文件
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --chown=nodejs:nodejs package*.json ./
-
-# 切换到非 root 用户
-USER nodejs
-
-# 暴露端口
-EXPOSE 3000
-
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node healthcheck.js
-
-# 启动应用
-CMD ["node", "dist/index.js"]
-```
-
-## 多阶段构建
-
-- 分离构建和运行环境
-- 减小最终镜像大小
-- 提高安全性
-- 复用构建缓存
-- 优化构建速度
-
-**多阶段构建示例：**
+### 1. 多阶段构建
 
 ```dockerfile
 # 构建阶段
 FROM golang:1.21-alpine AS builder
-
 WORKDIR /app
-
 COPY go.mod go.sum ./
 RUN go mod download
-
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN CGO_ENABLED=0 go build -o main .
 
 # 运行阶段
 FROM alpine:latest
-
 RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
-
-# 只复制编译好的二进制文件
 COPY --from=builder /app/main .
-
-EXPOSE 8080
-
 CMD ["./main"]
 ```
 
-## 镜像优化
-
-- 使用 alpine 基础镜像
-- 删除不必要的文件
-- 合并 RUN 指令
-- 使用 .dockerignore
-- 避免安装推荐包
-- 清理包管理器缓存
-
-**镜像优化示例：**
+### 2. 镜像优化
 
 ```dockerfile
-# ❌ 避免 - 每个 RUN 创建一层
-FROM node:18
-RUN apt-get update
-RUN apt-get install -y git
-RUN apt-get clean
-
-# ✅ 推荐 - 合并 RUN 指令
+# ✅ 合并 RUN 指令 + 清理缓存
 FROM node:18-alpine
-RUN apk add --no-cache git && \
-    rm -rf /var/cache/apk/*
+RUN apk add --no-cache git &&     rm -rf /var/cache/apk/*
 
-# Python 示例
-FROM python:3.11-slim
-
-# 一次性安装和清理
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc && \
-    pip install --no-cache-dir -r requirements.txt && \
-    apt-get purge -y --auto-remove gcc && \
-    rm -rf /var/lib/apt/lists/*
+# 使用非 root 用户
+RUN addgroup -g 1001 nodejs &&     adduser -S nodejs -u 1001
+USER nodejs
 ```
 
-## .dockerignore 文件
-
-- 排除不必要的文件
-- 减小构建上下文
-- 提高构建速度
-- 避免泄露敏感信息
-
-**.dockerignore 示例：**
+### 3. .dockerignore
 
 ```
-# Git
-.git
-.gitignore
-.github
-
-# 依赖
 node_modules
-npm-debug.log
-
-# 测试
-coverage
-*.test.js
-__tests__
-
-# 文档
-README.md
-docs
-*.md
-
-# 环境变量
+.git
 .env
-.env.local
-.env.*.local
-
-# IDE
-.vscode
-.idea
-*.swp
-*.swo
-
-# 构建产物
-dist
-build
+coverage
 *.log
+README.md
+.vscode
 ```
 
-## 环境变量和秘密
-
-- 使用 ARG 传递构建参数
-- 使用 ENV 设置环境变量
-- 不在镜像中存储秘密
-- 使用 Docker Secrets（Swarm）
-- 运行时注入敏感数据
-- 使用 .env 文件（开发）
-
-**环境变量示例：**
-
-```dockerfile
-# 构建参数
-ARG NODE_VERSION=18
-FROM node:${NODE_VERSION}-alpine
-
-# 环境变量
-ENV NODE_ENV=production \
-    PORT=3000
-
-# ❌ 不要这样存储秘密
-# ENV DATABASE_PASSWORD=secret123
-
-# ✅ 运行时传入
-# docker run -e DATABASE_PASSWORD=secret app
-```
-
-## Docker Compose
-
-- 定义多容器应用
-- 管理服务依赖
-- 使用网络隔离服务
-- 使用卷持久化数据
-- 环境变量管理
-- 健康检查配置
-
-**docker-compose.yml 示例：**
+### 4. Docker Compose
 
 ```yaml
 version: "3.8"
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NODE_VERSION: 18
+    build: .
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://db:5432/myapp
-    env_file:
-      - .env
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - app-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
-      timeout: 3s
-      retries: 3
 
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=myapp
-      - POSTGRES_USER=user
       - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
     secrets:
       - db_password
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    networks:
-      - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-    volumes:
-      - redis-data:/data
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
+      test: ["CMD-SHELL", "pg_isready"]
 
 volumes:
   postgres-data:
-  redis-data:
 
 secrets:
   db_password:
     file: ./secrets/db_password.txt
 ```
 
-## 数据持久化
-
-- 使用 Docker Volumes
-- 避免在容器内存储数据
-- 使用命名卷而非绑定挂载
-- 定期备份卷数据
-- 使用卷驱动器（生产）
-
-**数据卷示例：**
-
-```bash
-# 创建命名卷
-docker volume create myapp-data
-
-# 使用卷
-docker run -v myapp-data:/app/data myapp
-
-# 备份卷
-docker run --rm -v myapp-data:/data -v $(pwd):/backup alpine \
-  tar czf /backup/backup.tar.gz -C /data .
-
-# 恢复卷
-docker run --rm -v myapp-data:/data -v $(pwd):/backup alpine \
-  tar xzf /backup/backup.tar.gz -C /data
-```
-
-## 网络配置
-
-- 使用自定义网络
-- 隔离不同服务
-- 使用服务名称通信
-- 配置网络别名
-- 使用桥接网络（默认）
-- 生产环境使用 overlay 网络
-
-**网络配置示例：**
-
-```bash
-# 创建网络
-docker network create --driver bridge app-network
-
-# 连接容器到网络
-docker run --network app-network --name app myapp
-docker run --network app-network --name db postgres
-
-# 容器间通信使用服务名
-# app 容器可以通过 db:5432 访问数据库
-```
-
-## 安全最佳实践
-
-- 使用非 root 用户运行
-- 扫描镜像漏洞
-- 使用最小权限
-- 定期更新基础镜像
-- 不在镜像中存储秘密
-- 使用只读文件系统
-
-**安全配置示例：**
+### 5. 健康检查
 
 ```dockerfile
-FROM node:18-alpine
-
-# 创建非 root 用户
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
-WORKDIR /app
-
-COPY --chown=nodejs:nodejs . .
-
-# 切换到非 root 用户
-USER nodejs
-
-# 只读文件系统
-# docker run --read-only --tmpfs /tmp myapp
+HEALTHCHECK --interval=30s --timeout=3s --retries=3   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 ```
 
-## 健康检查
+## 项目特定配置
 
-- 定义健康检查
-- 配置 interval, timeout, retries 参数
-- 实现健康检查端点
-- 监控容器健康状态
-- 自动重启不健康容器
+**.dockerignore 必备：**
 
-**健康检查示例：**
-
-```dockerfile
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
-
-# 或使用 curl
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD curl -f http://localhost:3000/health || exit 1
 ```
-
-## 日志管理
-
-- 输出到标准输出/错误
-- 使用日志驱动
-- 集中日志管理
-- 日志轮转配置
-- 不在容器内存储日志
-
-**日志配置：**
-
-```bash
-# 查看日志
-docker logs -f container_name
-
-# 配置日志驱动
-docker run --log-driver json-file \
-  --log-opt max-size=10m \
-  --log-opt max-file=3 \
-  myapp
-```
-
-## CI/CD 集成
-
-- 自动构建镜像
-- 镜像版本管理
-- 自动化测试
-- 推送到镜像仓库
-- 自动部署
-
-**GitLab CI 示例：**
-
-```yaml
-# .gitlab-ci.yml
-build:
-  stage: build
-  script:
-    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
-    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
-    - docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:latest
-    - docker push $CI_REGISTRY_IMAGE:latest
-```
-
-## 工具配置
-
-**推荐工具：**
-
-- Docker Desktop
-- Docker Compose
-- Dive（镜像分析）
-- Trivy（安全扫描）
-- Hadolint（Dockerfile 检查）
-
-**常用命令：**
-
-```bash
-# 构建镜像
-docker build -t myapp:latest .
-
-# 运行容器
-docker run -d -p 3000:3000 --name myapp myapp:latest
-
-# 查看容器
-docker ps
-
-# 停止和删除
-docker stop myapp
-docker rm myapp
-
-# 清理
-docker system prune -a
+.git
+node_modules
+coverage
+*.log
+.env
+README.md
 ```
 
 ## 常见问题
 
 **Q: 如何减小镜像大小？**
-A: 使用 alpine 基础镜像，多阶段构建，清理缓存。
+A: 使用 alpine 基础镜像 + 多阶段构建 + 清理缓存。
 
-**Q: 容器数据丢失怎么办？**
+**Q: 容器数据丢失？**
 A: 使用 Docker Volumes 持久化数据。
 
 ## 扩展阅读
 
 - [Docker 官方文档](https://docs.docker.com/)
-- [Docker 最佳实践](https://docs.docker.com/develop/dev-best-practices/)
 - [Dockerfile 最佳实践](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
-- [Docker Compose 文档](https://docs.docker.com/compose/)

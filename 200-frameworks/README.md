@@ -160,6 +160,28 @@
 
 ---
 
+### 【IDE/编辑器扩展】260-269
+
+### [260. VSCode Extension Development](./260-vscode-extension.mdc)
+
+**适用场景:**
+
+- VSCode 扩展开发（TypeScript 5.9+, Node.js 24.9+, VSCode API 1.105+）
+- pnpm + esbuild + ESLint 9 项目
+- 命令/Provider/TreeView 等功能开发
+
+**核心内容:**
+
+- 项目结构（commands/providers/services/utils 分层）
+- 扩展生命周期（activate/deactivate）
+- 配置管理（workspace.getConfiguration 封装）
+- Provider 实现（TreeView/CodeLens/Completion）
+- 错误处理（统一异常处理）
+- 日志封装（OutputChannel）
+- TypeScript 严格模式（避免 any）
+
+---
+
 ### 【组合规则】270-289
 
 ### [270. TypeScript + React + Tailwind CSS 组合最佳实践](./270-typescript-react-tailwind.mdc)

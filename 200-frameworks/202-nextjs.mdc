@@ -1,53 +1,47 @@
 ---
 id: 202
-title: Next.js 最佳实践
-description: Next.js 14+ App Router 现代 Web 应用的最佳实践和模式
-globs: ["app/**/*", "pages/**/*", "next.config.js", "next.config.ts"]
+title: Next.js Best Practices
+description: Next.js 14+ App Router 开发规范（SSR/SSG/Server Components）
+globs: ["app/**/*", "pages/**/*", "next.config.{js,ts}"]
 priority: medium
 tags: [nextjs, react, ssr, app-router, server-components]
 version: 1.0.0
-author: Turbo AI Rules
-lastUpdated: 2025-11-20
+author: ygqygq2
+lastUpdated: 2025-12-26
 ---
 
-# Next.js 最佳实践
+# Next.js Best Practices
 
 ## 适用场景
 
-- Next.js 14+ App Router 应用
-- 服务端渲染（SSR）应用
-- 静态站点生成（SSG）
-- 全栈 React 应用
-- SEO 优化的 Web 应用
-- 电商和企业网站
+- Next.js 14+ App Router（非 Pages Router）
+- 服务端渲染（SSR）/静态生成（SSG）
+- React 全栈应用、SEO 优化
 
 ## 核心内容
 
-Next.js 开发的核心最佳实践，涵盖 App Router 架构、服务端组件、数据获取、路由设计、性能优化等方面。
+App Router 架构、Server/Client Components 分离、数据获取缓存、路由设计、性能优化。
 
 ## 关键原则
 
-- ✅ 使用 App Router（非 Pages Router）
-- ✅ 默认服务端组件，'use client' 标记客户端
-- ✅ 文件系统路由
-- ✅ fetch 缓存策略：revalidate/cache 选项
-- ✅ next/image 和 next/font 优化资源
+✅ 默认 Server Components，需交互才 'use client'  
+✅ 文件系统路由（page.tsx/layout.tsx/error.tsx/loading.tsx）  
+✅ fetch 缓存：`{ next: { revalidate: 3600 } }` 或 `{ cache: 'no-store' }`  
+✅ next/image + next/font 优化资源  
+✅ Promise.all() 并行数据获取，避免瀑布  
+✅ Suspense + loading.tsx 处理加载状态
 
 ## 项目结构
 
-Next.js 14 App Router 项目结构：
-
 ```
 app/
-├── (auth)/              # 路由组
-│   ├── login/
-│   └── register/
+├── (auth)/              # 路由组（不影响 URL）
+│   ├── login/page.tsx
+│   └── register/page.tsx
 ├── (dashboard)/
 │   ├── layout.tsx
 │   └── page.tsx
-├── api/                 # API 路由
-│   └── users/
-│       └── route.ts
+├── api/users/route.ts   # API 路由
 ├── components/          # 共享组件
 ├── lib/                 # 工具函数
 ├── layout.tsx           # 根布局
@@ -55,220 +49,277 @@ app/
 └── globals.css
 ```
 
-## App Router 架构
+## 关键决策点
 
-- 默认服务端组件，需要交互才用 'use client'
-- 路由组 (folder) 组织相关路由，不影响 URL
-- 布局嵌套：每层路由可有 layout.tsx
-- loading.tsx 自动包裹 Suspense
-- error.tsx 处理该路由段错误
+### 1. Server vs Client Components
 
-## 服务端组件 vs 客户端组件
-
-**服务端组件（默认）：**
-
-- 数据获取
-- 访问后端资源
-- 保护敏感信息
-- 减少客户端 JavaScript
-
-**客户端组件（'use client'）：**
-
-- 使用 React Hooks
-- 事件监听器
-- 浏览器 API
-- 状态管理
-
-## 数据获取
-
-- 服务端组件中直接 async/await fetch
-- 缓存策略：{ next: { revalidate: 3600 } } 或 { cache: 'force-cache' }
-- 并行请求：Promise.all() 避免瀑布
-- Suspense + loading.tsx 处理加载
-- error.tsx 捕获异常
-
-**数据获取示例：**
+**何时:** 组件设计时  
+**为什么:** 减少客户端 JS，提升性能
 
 ```tsx
-// app/users/page.tsx
-async function getUsers() {
-  const res = await fetch("https://api.example.com/users", {
-    next: { revalidate: 3600 }, // 缓存 1 小时
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch users");
-  }
-
-  return res.json();
+// ✅ Server Component（默认）- 数据获取/静态内容
+async function UsersPage() {
+  const users = await fetch("...").then((r) => r.json());
+  return <UserList users={users} />;
 }
 
-export default async function UsersPage() {
-  const users = await getUsers();
+// ✅ Client Component - 交互/状态/浏览器 API
+("use client");
+import { useState } from "react";
 
-  return (
-    <div>
-      <h1>Users</h1>
-      <UserList users={users} />
-    </div>
-  );
+function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(count + 1)}>{count}</button>;
 }
 ```
 
-**并行数据获取：**
+### 2. 数据获取与缓存
+
+**何时:** 服务端组件中获取数据  
+**为什么:** 控制缓存策略，优化性能
 
 ```tsx
-// 避免瀑布式请求
-async function ProductPage({ params }: { params: { id: string } }) {
-  // ❌ 瀑布式 - 串行执行
-  const product = await getProduct(params.id);
-  const reviews = await getReviews(params.id);
+// 静态数据（默认缓存）
+const res = await fetch("https://api.example.com/posts");
 
-  // ✅ 并行执行
-  const [product, reviews] = await Promise.all([getProduct(params.id), getReviews(params.id)]);
+// 动态数据（不缓存）
+const res = await fetch("https://api.example.com/posts", {
+  cache: "no-store",
+});
 
-  return <ProductDetail product={product} reviews={reviews} />;
-}
+// ISR（定时重新验证）
+const res = await fetch("https://api.example.com/posts", {
+  next: { revalidate: 3600 }, // 每小时
+});
+
+// 并行请求（避免瀑布）
+const [product, reviews] = await Promise.all([getProduct(id), getReviews(id)]);
 ```
 
-**使用 Suspense 处理加载状态：**
+### 3. 路由设计
 
-```tsx
-// app/dashboard/page.tsx
-import { Suspense } from "react";
-
-async function Analytics() {
-  const data = await fetchAnalytics();
-  return <AnalyticsChart data={data} />;
-}
-
-async function RecentOrders() {
-  const orders = await fetchRecentOrders();
-  return <OrdersList orders={orders} />;
-}
-
-export default function DashboardPage() {
-  return (
-    <div>
-      <h1>Dashboard</h1>
-
-      <Suspense fallback={<AnalyticsSkeleton />}>
-        <Analytics />
-      </Suspense>
-
-      <Suspense fallback={<OrdersSkeleton />}>
-        <RecentOrders />
-      </Suspense>
-    </div>
-  );
-}
-```
-
-**错误处理：**
-
-```tsx
-// app/products/error.tsx
-"use client";
-
-export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  return (
-    <div>
-      <h2>Something went wrong!</h2>
-      <p>{error.message}</p>
-      <button onClick={() => reset()}>Try again</button>
-    </div>
-  );
-}
-```
-
-## 路由和导航
-
-- 文件系统路由：page.tsx 定义路由
-- 动态路由：[id] 文件夹
-- 路由组：(folder) 不影响 URL
-- Link 组件预取，useRouter hook 编程导航
-- Middleware 实现路由保护
-
-**文件系统路由示例：**
+**何时:** 文件系统路由  
+**为什么:** 约定优于配置
 
 ```
 app/
 ├── page.tsx              → /
-├── about/
-│   └── page.tsx          → /about
+├── about/page.tsx        → /about
 ├── blog/
 │   ├── page.tsx          → /blog
-│   └── [slug]/
-│       └── page.tsx      → /blog/post-1
-└── (marketing)/          → 路由组（不影响 URL）
-    ├── pricing/
-    │   └── page.tsx      → /pricing
-    └── contact/
-        └── page.tsx      → /contact
+│   └── [slug]/page.tsx   → /blog/:slug (动态)
+├── (marketing)/          → 路由组（不影响 URL）
+│   └── pricing/page.tsx  → /pricing
+└── api/users/route.ts    → /api/users (API 路由)
 ```
 
-**动态路由：**
-
 ```tsx
-// app/blog/[slug]/page.tsx
-interface PageProps {
-  params: { slug: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+// 动态路由 + generateStaticParams
+export async function generateStaticParams() {
+  const posts = await getAllPosts();
+  return posts.map((p) => ({ slug: p.slug }));
 }
 
-export default async function BlogPost({ params }: PageProps) {
+export default async function BlogPost({ params }: { params: { slug: string } }) {
   const post = await getPost(params.slug);
   return <Article post={post} />;
 }
-
-// 生成静态参数
-export async function generateStaticParams() {
-  const posts = await getAllPosts();
-  return posts.map((post) => ({
-    slug: post.slug,
-  }));
-}
 ```
 
-**导航组件：**
+### 4. 加载与错误处理
+
+**何时:** 每个路由段  
+**为什么:** 提升用户体验
 
 ```tsx
-import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+// loading.tsx（自动包裹 Suspense）
+export default function Loading() {
+  return <Skeleton />;
+}
 
-// 使用 Link 组件
-export function Navigation() {
-  const pathname = usePathname();
-
+// error.tsx（错误边界）
+("use client");
+export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   return (
-    <nav>
-      <Link href="/" className={pathname === "/" ? "active" : ""}>
-        Home
-      </Link>
-      <Link href="/about">About</Link>
-    </nav>
+    <div>
+      <h2>Something went wrong!</h2>
+      <button onClick={reset}>Try again</button>
+    </div>
   );
 }
 
-// 编程式导航（客户端组件）
-("use client");
+// Suspense 精细控制
+import { Suspense } from "react";
 
-export function NavigateButton() {
-  const router = useRouter();
-
-  const handleClick = () => {
-    router.push("/dashboard");
-    // router.replace('/dashboard');  // 不添加历史记录
-    // router.back();                 // 返回
-  };
-
-  return <button onClick={handleClick}>Go to Dashboard</button>;
+export default function Page() {
+  return (
+    <>
+      <Suspense fallback={<ChartSkeleton />}>
+        <Analytics />
+      </Suspense>
+      <Suspense fallback={<OrdersSkeleton />}>
+        <RecentOrders />
+      </Suspense>
+    </>
+  );
 }
 ```
 
-**路由保护（Middleware）：**
+### 5. 图片与字体优化
 
-```typescript
+**何时:** 加载图片和字体  
+**为什么:** 自动优化，提升性能
+
+```tsx
+import Image from "next/image";
+import { Inter } from "next/font/google";
+
+// 图片优化
+<Image
+  src="/hero.jpg"
+  alt="Hero"
+  width={800}
+  height={600}
+  priority // 预加载关键图片
+  placeholder="blur"
+/>;
+
+// 字体优化
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+
+export default function RootLayout({ children }) {
+  return (
+    <html className={inter.variable}>
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+### 6. Server Actions（表单处理）
+
+**何时:** 表单提交/数据变更  
+**为什么:** 无需 API 路由，直接服务端执行
+
+```tsx
+// app/actions.ts
+"use server";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const schema = z.object({
+  title: z.string().min(1),
+  content: z.string().min(1),
+});
+
+export async function createPost(formData: FormData) {
+  const result = schema.safeParse({
+    title: formData.get("title"),
+    content: formData.get("content"),
+  });
+
+  if (!result.success) {
+    return { error: result.error.flatten() };
+  }
+
+  await db.post.create({ data: result.data });
+  revalidatePath("/posts");
+  return { success: true };
+}
+
+// 使用
+<form action={createPost}>
+  <input name="title" />
+  <textarea name="content" />
+  <button type="submit">Create</button>
+</form>;
+```
+
+### 7. 认证（NextAuth.js）
+
+**何时:** 需要用户认证  
+**为什么:** 官方推荐方案
+
+```tsx
+// app/api/auth/[...nextauth]/route.ts
+import NextAuth from "next-auth";
+import GithubProvider from "next-auth/providers/github";
+
+export const authOptions = {
+  providers: [
+    GithubProvider({
+      clientId: process.env.GITHUB_ID!,
+      clientSecret: process.env.GITHUB_SECRET!,
+    }),
+  ],
+};
+
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };
+
+// 服务端组件使用
+import { getServerSession } from "next-auth";
+
+async function ProfilePage() {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
+  return <Profile user={session.user} />;
+}
+
+// 客户端组件使用
+("use client");
+import { useSession } from "next-auth/react";
+
+function UserMenu() {
+  const { data: session } = useSession();
+  if (!session) return <LoginButton />;
+  return <UserDropdown user={session.user} />;
+}
+```
+
+## 项目特定配置
+
+### next.config.ts
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  images: {
+    domains: ["cdn.example.com"],
+    formats: ["image/webp", "image/avif"],
+  },
+  experimental: {
+    serverActions: true,
+  },
+};
+
+export default nextConfig;
+```
+
+### 环境变量
+
+```bash
+# .env.local
+DATABASE_URL="postgresql://..."         # 仅服务端
+NEXT_PUBLIC_API_URL="https://api..."    # 客户端可访问（NEXT_PUBLIC_前缀）
+```
+
+```tsx
+// 使用 Zod 验证
+import { z } from "zod";
+
+const envSchema = z.object({
+  DATABASE_URL: z.string().url(),
+  NEXT_PUBLIC_API_URL: z.string().url(),
+});
+
+export const env = envSchema.parse(process.env);
+```
+
+### Middleware（路由保护）
+
+```ts
 // middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -276,11 +327,8 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const token = request.cookies.get("token");
 
-  // 保护 /dashboard 路由
-  if (request.nextUrl.pathname.startsWith("/dashboard")) {
-    if (!token) {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
+  if (request.nextUrl.pathname.startsWith("/dashboard") && !token) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return NextResponse.next();
@@ -291,526 +339,19 @@ export const config = {
 };
 ```
 
-## 元数据和 SEO
-
-- 使用 Metadata API
-- 实施动态元数据
-- 使用 generateMetadata 函数
-- 添加 Open Graph 图片
-- 实施结构化数据
-- 优化页面标题和描述
-
-**元数据示例：**
-
-```tsx
-export const metadata: Metadata = {
-  title: "My App",
-  description: "App description",
-  openGraph: {
-    title: "My App",
-    description: "App description",
-    images: ["/og-image.jpg"],
-  },
-};
-```
-
-## 图片优化
-
-- 使用 next/image 组件
-- 指定图片尺寸
-- 使用 priority 属性加载关键图片，lazy 加载非关键内容
-- 实施响应式图片
-- 使用 placeholder 优化体验
-- 配置图片域名白名单
-
-**图片优化示例：**
-
-```tsx
-import Image from "next/image";
-
-// 基础用法
-export function ProductImage() {
-  return (
-    <Image
-      src="/product.jpg"
-      alt="Product"
-      width={500}
-      height={300}
-      priority // 预加载关键图片
-    />
-  );
-}
-
-// 响应式图片
-export function HeroImage() {
-  return (
-    <Image
-      src="/hero.jpg"
-      alt="Hero"
-      fill
-      className="object-cover"
-      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-    />
-  );
-}
-
-// 外部图片
-export function Avatar({ url }: { url: string }) {
-  return <Image src={url} alt="Avatar" width={40} height={40} className="rounded-full" />;
-}
-
-// 使用 placeholder 优化体验
-export function OptimizedImage() {
-  return (
-    <Image
-      src="/large-image.jpg"
-      alt="Large image"
-      width={800}
-      height={600}
-      placeholder="blur"
-      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRg..."
-      loading="lazy"
-    />
-  );
-}
-```
-
-**next.config.ts 图片配置：**
-
-```typescript
-const nextConfig: NextConfig = {
-  images: {
-    domains: ["example.com", "cdn.example.com"],
-    formats: ["image/webp", "image/avif"],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-  },
-};
-```
-
-## 性能优化
-
-- 使用服务端组件减少 JS
-- 实施代码分割
-- 使用动态导入
-- 优化字体加载
-- 使用 revalidate、cache: 'force-cache' 或 'no-store' 配置缓存
-- 使用 Suspense 和流式渲染
-
-**动态导入：**
-
-```tsx
-import dynamic from "next/dynamic";
-
-// 动态加载客户端组件
-const DynamicChart = dynamic(() => import("@/components/Chart"), {
-  loading: () => <p>Loading chart...</p>,
-  ssr: false, // 禁用 SSR
-});
-
-// 动态加载重型组件
-const HeavyComponent = dynamic(() => import("@/components/HeavyComponent"), {
-  loading: () => <Skeleton />,
-});
-
-export default function Dashboard() {
-  return (
-    <div>
-      <h1>Dashboard</h1>
-      <DynamicChart />
-      <HeavyComponent />
-    </div>
-  );
-}
-```
-
-**字体优化：**
-
-```tsx
-// app/layout.tsx
-import { Inter, Roboto_Mono } from "next/font/google";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-});
-
-const robotoMono = Roboto_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-roboto-mono",
-});
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en" className={`${inter.variable} ${robotoMono.variable}`}>
-      <body>{children}</body>
-    </html>
-  );
-}
-```
-
-**缓存策略：**
-
-```tsx
-// 静态数据（默认缓存）
-const res = await fetch("https://api.example.com/data");
-
-// 动态数据（不缓存）
-const res = await fetch("https://api.example.com/data", {
-  cache: "no-store",
-});
-
-// 定时重新验证（ISR）
-const res = await fetch("https://api.example.com/data", {
-  next: { revalidate: 3600 }, // 每小时重新验证
-});
-
-// 按需重新验证
-import { revalidatePath, revalidateTag } from "next/cache";
-
-// 重新验证特定路径
-revalidatePath("/posts");
-
-// 重新验证带标签的数据
-const res = await fetch("https://api.example.com/posts", {
-  next: { tags: ["posts"] },
-});
-revalidateTag("posts");
-```
-
-## API 路由
-
-- 使用 app/api 目录
-- 使用 route.ts 文件
-- 支持 GET、POST 等方法
-- 使用 error.tsx 和 not-found.tsx 处理错误
-- 使用 NextResponse
-- 实施 API 中间件
-
-**API 路由示例：**
-
-```tsx
-// app/api/users/route.ts
-export async function GET() {
-  const users = await fetchUsers();
-  return NextResponse.json(users);
-}
-
-export async function POST(request: Request) {
-  const body = await request.json();
-  const user = await createUser(body);
-  return NextResponse.json(user, { status: 201 });
-}
-```
-
-## 认证和授权
-
-- 使用 NextAuth.js
-- 实施服务端会话检查
-- 使用 middleware 保护路由
-- 实施基于角色的访问控制
-- 安全存储令牌
-- 实施 CSRF 保护
-
-**NextAuth.js 配置：**
-
-```typescript
-// app/api/auth/[...nextauth]/route.ts
-import NextAuth from "next-auth";
-import GithubProvider from "next-auth/providers/github";
-import CredentialsProvider from "next-auth/providers/credentials";
-
-export const authOptions = {
-  providers: [
-    GithubProvider({
-      clientId: process.env.GITHUB_ID!,
-      clientSecret: process.env.GITHUB_SECRET!,
-    }),
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        // 验证用户
-        const user = await verifyUser(credentials);
-        return user || null;
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-    error: "/auth/error",
-  },
-};
-
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
-```
-
-**使用会话：**
-
-```tsx
-// 服务端组件
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-
-export default async function ProfilePage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  return <ProfileContent user={session.user} />;
-}
-
-// 客户端组件
-("use client");
-import { useSession } from "next-auth/react";
-
-export function UserMenu() {
-  const { data: session, status } = useSession();
-
-  if (status === "loading") return <div>Loading...</div>;
-  if (!session) return <LoginButton />;
-
-  return <UserDropdown user={session.user} />;
-}
-```
-
-## 环境变量
-
-- 使用 .env.local 文件
-- NEXT*PUBLIC*\* 前缀用于客户端变量
-- 不暴露敏感信息
-- 使用不同环境的配置
-- 在构建时验证环境变量
-- 使用 zod 验证环境变量
-
-**环境变量配置：**
-
-```bash
-# .env.local
-DATABASE_URL="postgresql://localhost:5432/mydb"
-API_SECRET_KEY="secret123"
-
-# 客户端可访问
-NEXT_PUBLIC_API_URL="https://api.example.com"
-NEXT_PUBLIC_GA_ID="G-XXXXXXXXXX"
-```
-
-**使用环境变量：**
-
-```typescript
-// 服务端（任何环境变量）
-const dbUrl = process.env.DATABASE_URL;
-const apiKey = process.env.API_SECRET_KEY;
-
-// 客户端（仅 NEXT_PUBLIC_* 变量）
-const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-```
-
-**使用 Zod 验证环境变量：**
-
-```typescript
-// lib/env.ts
-import { z } from "zod";
-
-const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  API_SECRET_KEY: z.string().min(10),
-  NEXT_PUBLIC_API_URL: z.string().url(),
-  NODE_ENV: z.enum(["development", "production", "test"]),
-});
-
-export const env = envSchema.parse(process.env);
-```
-
-**不同环境的配置：**
-
-```
-.env.local           # 所有环境加载
-.env.development     # 开发环境
-.env.production      # 生产环境
-.env.test            # 测试环境
-```
-
-## 配置示例
-
-**next.config.ts：**
-
-```typescript
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  images: {
-    domains: ["example.com"],
-  },
-  experimental: {
-    serverActions: true,
-  },
-};
-
-export default nextConfig;
-```
-
-## Server Actions
-
-Server Actions 是在服务端执行的异步函数，可以直接在组件中调用。
-
-**基础用法：**
-
-```tsx
-// app/actions.ts
-"use server";
-
-import { revalidatePath } from "next/cache";
-
-export async function createPost(formData: FormData) {
-  const title = formData.get("title") as string;
-  const content = formData.get("content") as string;
-
-  // 数据验证
-  if (!title || !content) {
-    return { error: "Title and content are required" };
-  }
-
-  // 保存到数据库
-  await db.post.create({
-    data: { title, content },
-  });
-
-  // 重新验证页面
-  revalidatePath("/posts");
-
-  return { success: true };
-}
-
-// app/posts/new/page.tsx
-import { createPost } from "@/app/actions";
-
-export default function NewPostPage() {
-  return (
-    <form action={createPost}>
-      <input name="title" placeholder="Title" />
-      <textarea name="content" placeholder="Content" />
-      <button type="submit">Create Post</button>
-    </form>
-  );
-}
-```
-
-**使用 Zod 验证：**
-
-```tsx
-"use server";
-
-import { z } from "zod";
-
-const createUserSchema = z.object({
-  name: z.string().min(1).max(100),
-  email: z.string().email(),
-  password: z.string().min(8),
-});
-
-export async function createUser(formData: FormData) {
-  const rawData = {
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-  };
-
-  // 验证数据
-  const result = createUserSchema.safeParse(rawData);
-
-  if (!result.success) {
-    return {
-      error: "Validation failed",
-      issues: result.error.flatten().fieldErrors,
-    };
-  }
-
-  const user = await db.user.create({
-    data: result.data,
-  });
-
-  return { success: true, user };
-}
-```
-
-**在客户端组件中使用：**
-
-```tsx
-"use client";
-
-import { useTransition } from "react";
-import { createPost } from "@/app/actions";
-
-export function CreatePostForm() {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (formData: FormData) => {
-    startTransition(async () => {
-      const result = await createPost(formData);
-      if (result.error) {
-        setError(result.error);
-      } else {
-        // 成功处理
-        router.push("/posts");
-      }
-    });
-  };
-
-  return (
-    <form action={handleSubmit}>
-      <input name="title" disabled={isPending} />
-      <button type="submit" disabled={isPending}>
-        {isPending ? "Creating..." : "Create Post"}
-      </button>
-      {error && <p className="text-red-500">{error}</p>}
-    </form>
-  );
-}
-```
-
 ## 常见问题
 
-**Q: 何时使用服务端组件 vs 客户端组件？**
-A: 默认使用服务端组件，需要交互（useState、useEffect、事件处理器）时使用客户端组件。
+**Q: 何时用 Server vs Client Component?**  
+A: 默认 Server，需要 useState/useEffect/事件处理才用 Client
 
-**Q: 如何处理表单提交？**
-A: 使用 Server Actions（推荐）或 API 路由。
+**Q: 如何优化首屏加载?**  
+A: Server Components + next/image + 代码分割 + Suspense
 
-**Q: 如何在服务端组件中使用客户端库？**
-A: 将客户端库封装在客户端组件中，然后在服务端组件中导入使用。
-
-**Q: 如何优化首屏加载时间？**
-A: 使用服务端组件、优化图片、实施代码分割、使用流式渲染和 Suspense。
+**Q: 如何处理表单?**  
+A: Server Actions（推荐）或 API 路由
 
 ## 扩展阅读
 
-- [Next.js 官方文档](https://nextjs.org/docs)
-- [Next.js Learn 教程](https://nextjs.org/learn)
-- [App Router 迁移指南](https://nextjs.org/docs/app/building-your-application/upgrading/app-router-migration)
-- [Next.js 性能优化](https://nextjs.org/docs/app/building-your-application/optimizing)
+- [Next.js App Router 文档](https://nextjs.org/docs/app)
+- [Data Fetching 指南](https://nextjs.org/docs/app/building-your-application/data-fetching)
+- [Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations)

@@ -12,126 +12,91 @@ lastUpdated: 2025-11-20
 
 # API 文档最佳实践
 
-## 适用场景
-
-- API 文档编写
-- OpenAPI/Swagger 规范
-- README 文档
-- 开发者文档
-
 ## 关键原则
 
-- ✅ 文档即代码
-- ✅ 提供多语言示例
-- ✅ 交互式文档
+- ✅ 文档即代码（OpenAPI 规范）
+- ✅ 多语言示例（cURL, JavaScript, Python）
+- ✅ 交互式文档（Swagger UI/Redoc）
 - ✅ 版本化文档
 
 ## OpenAPI 规范关键点
-
-**必须包含的元素：**
 
 ```yaml
 openapi: 3.0.0
 info:
   title: API Title
   version: 1.0.0
-  contact: # 支持联系方式
+  contact:
     email: api@example.com
 
-servers: # 多环境支持
+servers:
   - url: https://api.example.com/v1
-  - url: http://localhost:3000/v1
-
-tags: # API 分组
-  - name: Users
-  - name: Authentication
 
 paths:
   /users:
     get:
       operationId: listUsers # 必须唯一
       tags: [Users]
-      parameters: # 查询参数验证
+      parameters:
         - name: limit
           in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
       responses:
         "200":
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/UserList"
-              examples: # 提供示例数据
-                success:
-                  value: { data: [...], pagination: { ... } }
+              schema: { $ref: "#/components/schemas/UserList" }
+              examples:
+                success: { value: { data: [...] } }
       security:
-        - bearerAuth: [] # 认证要求
+        - bearerAuth: []
 
 components:
-  schemas: # 可复用的 Schema
+  schemas:
     User:
       required: [id, email]
       properties:
         id: { type: string }
         email: { type: string, format: email }
 
-  responses: # 可复用的响应
-    BadRequest:
-      description: Bad request
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/Error"
-
-  securitySchemes: # 认证方式
+  securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
 ```
 
-## README 结构要点
+## README 结构
 
 ```markdown
 # 项目名称
 
 > 一句话描述
 
-## 特性（用表情符号标记）
+## 特性
 
 - 🚀 核心特性 1
-- 📦 核心特性 2
 
 ## 快速开始（3 步以内）
 
-## API 参数表格（必填/选填/默认值）
+## API 参数
 
 | 名称 | 类型   | 必填 | 默认值 | 描述 |
 | ---- | ------ | ---- | ------ | ---- |
 | port | number | 否   | 3000   | 端口 |
-
-## 开发命令（标准化）
-
-## 贡献指南链接
 ```
 
-## 代码示例关键点
-
-**必须提供 cURL 和主流语言示例：**
+## 代码示例
 
 ```bash
-# cURL（基准示例）
+# cURL
 curl -X POST https://api.example.com/users \
   -H "Authorization: Bearer TOKEN" \
   -d '{"name":"John"}'
 ```
 
 ```javascript
-// JavaScript/TypeScript（现代语法）
+// JavaScript
 const res = await fetch(url, {
   method: "POST",
   headers: { Authorization: `Bearer ${token}` },
@@ -139,44 +104,34 @@ const res = await fetch(url, {
 });
 ```
 
-```python
-# Python（requests 库）
-requests.post(url, headers={...}, json=data)
-```
-
-## 错误文档关键点
-
-**标准化错误响应格式：**
+## 错误文档
 
 ```json
 {
   "error": {
-    "code": "VALIDATION_ERROR", // 机器可读
-    "message": "Invalid input", // 人类可读
-    "details": { "field": "email", "issue": "..." }, // 详细信息
-    "requestId": "req_abc123" // 追踪 ID
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input",
+    "details": { "field": "email" },
+    "requestId": "req_abc123"
   }
 }
 ```
 
-**错误码表格（必须包含解决方案）：**
+| 错误码              | HTTP | 解决方案           |
+| ------------------- | ---- | ------------------ |
+| AUTH_REQUIRED       | 401  | 添加 Authorization |
+| RATE_LIMIT_EXCEEDED | 429  | 降低请求频率       |
 
-| 错误码              | HTTP | 描述         | 解决方案           |
-| ------------------- | ---- | ------------ | ------------------ |
-| AUTH_REQUIRED       | 401  | 缺少认证令牌 | 添加 Authorization |
-| VALIDATION_ERROR    | 400  | 验证失败     | 查看 details 字段  |
-| RATE_LIMIT_EXCEEDED | 429  | 频率超限     | 降低请求频率       |
+## 文档工具
 
-## 文档生成工具配置
-
-**Redoc（推荐用于美观的文档）：**
+**Redoc（美观）：**
 
 ```html
 <redoc spec-url="./openapi.yml"></redoc>
 <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
 ```
 
-**Swagger UI（推荐用于交互式测试）：**
+**Swagger UI（交互式）：**
 
 ```yaml
 # docker-compose.yml
@@ -185,69 +140,23 @@ services:
     image: swaggerapi/swagger-ui
     environment:
       SWAGGER_JSON: /openapi/openapi.yml
-    volumes:
-      - ./docs:/openapi
 ```
 
-**Docusaurus（推荐用于完整文档站点）：**
-
-```bash
-npx create-docusaurus@latest my-docs classic
-
-# 目录结构
-docs/
-├── api/              # API 参考
-├── guides/           # 使用指南
-└── reference/        # 错误码等参考
-```
-
-## 版本化文档策略
-
-**目录结构：**
+## 版本化策略
 
 ```
 /docs/v1/           # 旧版本
 /docs/v2/           # 当前版本
-/docs/latest/       # 链接到最新稳定版
+/docs/latest/       # 链接到最新
 ```
 
-**迁移指南必备内容：**
-
-- 重大变更清单
-- 新旧 API 对比
-- 迁移步骤清单
-- 弃用时间表
-
-## 交互式文档
-
-**Postman Collection 导出：**
-
-- 变量化配置（baseUrl, token）
-- 每个端点提供示例
-- 设置认证方式
-- 提供环境配置
-
-## 项目特定配置
-
-**devDependencies（选择工具）：**
+## 项目配置
 
 ```json
 {
-  "@redocly/cli": "^1.0.0", // OpenAPI 校验和打包
-  "swagger-ui-express": "^5.0.0", // Node.js 集成
-  "docusaurus": "^3.0.0", // 文档站点
-  "@stoplight/elements": "^7.0.0" // 嵌入式文档
+  "devDependencies": {
+    "@redocly/cli": "^1.0.0",
+    "swagger-ui-express": "^5.0.0"
+  }
 }
 ```
-
-**CI/CD 集成：**
-
-- OpenAPI 校验
-- 文档自动部署
-- 示例代码自动测试
-
-## 扩展阅读
-
-- [OpenAPI Specification](https://swagger.io/specification/)
-- [Redoc Documentation](https://redocly.com/docs/redoc/)
-- [API Design Guidelines](https://github.com/microsoft/api-guidelines)

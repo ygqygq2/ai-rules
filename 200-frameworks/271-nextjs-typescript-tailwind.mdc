@@ -14,59 +14,35 @@ lastUpdated: 2025-11-20
 
 ## 适用场景
 
-本规则仅涵盖三个技术栈**组合使用时的特定集成模式**，不包含各单一技术栈的基础最佳实践。
+本规则仅涵盖三个技术栈**组合使用时的特定集成模式**。
 
-- Next.js App Router + TypeScript + Tailwind CSS 项目
 - 服务端组件的类型安全样式
 - API 路由的类型化和验证
 - 全栈类型安全开发
 
-## 核心内容
-
-专注于三技术栈在 Next.js 环境下的协同工作：
-
-- 服务端组件的 TypeScript 类型 + Tailwind 样式
-- API 路由的类型安全和 Zod 验证
-- 客户端组件的类型化表单处理
-- 路径别名和类型导入配置
-
 ## 关键原则
 
-- ✅ 服务端组件使用类型化的 props 和 Tailwind 样式
-- ✅ API 路由使用 Zod schema 验证
-- ✅ 配置 TypeScript 路径别名
-- ✅ 客户端组件类型化的表单处理
-- ✅ 类型安全的元数据和页面 props
+- ✅ 服务端组件：类型化 props + Metadata + Tailwind 响应式
+- ✅ API 路由：Zod schema 验证 + 类型推断
+- ✅ 客户端/服务端共享 Zod schema
+- ✅ TypeScript 路径别名 + Tailwind 配置对齐
 
 ## TypeScript 路径别名配置
-
-Next.js 项目的 TypeScript 路径别名设置：
 
 ```json
 // tsconfig.json
 {
   "compilerOptions": {
-    "strict": true,
     "paths": {
       "@/*": ["./*"],
       "@/components/*": ["./components/*"],
-      "@/lib/*": ["./lib/*"],
-      "@/types/*": ["./types/*"],
-      "@/app/*": ["./app/*"]
+      "@/lib/*": ["./lib/*"]
     }
   }
 }
 ```
 
-**组合使用优势：**
-
-- 简化组件和工具函数导入
-- 类型检查支持路径别名
-- Tailwind 配置路径与 TypeScript 对齐
-
 ## 类型安全的服务端组件 + Tailwind
-
-服务端组件结合 TypeScript 类型和 Tailwind 样式：
 
 ```tsx
 // app/users/page.tsx
@@ -77,21 +53,18 @@ interface User {
   name: string;
   email: string;
 }
-
 interface UsersPageProps {
   searchParams: { page?: string };
 }
 
 export const metadata: Metadata = {
   title: "Users",
-  description: "User management page",
 };
 
 async function getUsers(page: number = 1): Promise<User[]> {
   const res = await fetch(`https://api.example.com/users?page=${page}`, {
     next: { revalidate: 3600 },
   });
-
   if (!res.ok) throw new Error("Failed to fetch users");
   return res.json();
 }
@@ -103,7 +76,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Users</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {users.map((user) => (
           <UserCard key={user.id} user={user} />
         ))}
@@ -115,19 +88,17 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
 
 **关键集成点：**
 
-- `Metadata` 类型确保 SEO 元数据类型安全
+- `Metadata` 类型确保 SEO 元数据安全
 - `searchParams` 类型化页面参数
-- Tailwind 响应式网格布局
-- TypeScript 异步函数返回类型
+- Tailwind 响应式网格
 
-## 类型安全的 API 路由 + Zod 验证
+## 类型安全的 API 路由 + Zod
 
 ```tsx
 // app/api/users/route.ts
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-// Zod schema 同时用于类型推断和运行时验证
 const createUserSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
@@ -139,54 +110,36 @@ type CreateUserInput = z.infer<typeof createUserSchema>;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-
-    // 运行时验证 + 类型推断
-    const validatedData = createUserSchema.parse(body);
-
+    const validatedData = createUserSchema.parse(body); // 运行时验证 + 类型推断
     const user = await createUser(validatedData);
-
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.errors }, { status: 400 });
     }
-
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
   }
 }
 ```
 
-**组合优势：**
-
-- Zod 提供运行时验证和类型推断
-- TypeScript 确保 API 处理函数类型安全
-- 错误响应类型化
-
-## 客户端组件的类型化表单 + Tailwind
+## 客户端类型化表单 + Tailwind
 
 ```tsx
 // components/user-form.tsx
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 const userSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  age: z.number().int().positive("Age must be a positive number"),
+  name: z.string().min(2),
+  email: z.string().email(),
+  age: z.number().int().positive(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
 
-interface UserFormProps {
-  onSuccess?: () => void;
-}
-
-export function UserForm({ onSuccess }: UserFormProps) {
+export function UserForm({ onSuccess }: { onSuccess?: () => void }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -205,24 +158,19 @@ export function UserForm({ onSuccess }: UserFormProps) {
 
     try {
       const validatedData = userSchema.parse(data);
-
       const response = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validatedData),
       });
-
       if (!response.ok) throw new Error("Failed to create user");
-
       router.refresh();
       onSuccess?.();
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
-          if (err.path[0]) {
-            fieldErrors[err.path[0] as string] = err.message;
-          }
+          if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
         });
         setErrors(fieldErrors);
       }
@@ -236,7 +184,7 @@ export function UserForm({ onSuccess }: UserFormProps) {
       <Input name="name" label="Name" error={errors.name} />
       <Input name="email" type="email" label="Email" error={errors.email} />
       <Input name="age" type="number" label="Age" error={errors.age} />
-      <Button type="submit" isLoading={isLoading} fullWidth>
+      <Button type="submit" isLoading={isLoading}>
         Create User
       </Button>
     </form>
@@ -246,14 +194,11 @@ export function UserForm({ onSuccess }: UserFormProps) {
 
 **集成要点：**
 
-- 客户端和服务端使用相同的 Zod schema
-- TypeScript 类型化表单状态
-- Tailwind 样式的表单布局
+- 客户端和服务端使用相同 Zod schema
 - Next.js useRouter 刷新服务端数据
+- Tailwind 表单样式
 
 ## Next.js + CVA 组件库
-
-结合 Next.js 特性的可重用组件：
 
 ```tsx
 // components/ui/button.tsx
@@ -270,13 +215,9 @@ const buttonVariants = cva("inline-flex items-center justify-center rounded-lg f
     size: {
       sm: "h-9 px-3 text-sm",
       md: "h-10 px-4",
-      lg: "h-11 px-8 text-lg",
     },
   },
-  defaultVariants: {
-    variant: "primary",
-    size: "md",
-  },
+  defaultVariants: { variant: "primary", size: "md" },
 });
 
 export interface ButtonProps
@@ -304,66 +245,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button";
 ```
 
-## 响应式布局组件
-
-```tsx
-// components/layout/container.tsx
-import { type ReactNode } from "react";
-import { cn } from "@/lib/utils";
-
-interface ContainerProps {
-  children: ReactNode;
-  className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
-}
-
-export function Container({ children, className, size = "lg" }: ContainerProps) {
-  return (
-    <div
-      className={cn(
-        "mx-auto px-4 sm:px-6 lg:px-8",
-        {
-          "max-w-3xl": size === "sm",
-          "max-w-5xl": size === "md",
-          "max-w-7xl": size === "lg",
-          "max-w-screen-2xl": size === "xl",
-        },
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-```
-
-## Next.js 配置集成
-
-```typescript
-// next.config.ts
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  // TypeScript 严格模式
-  typescript: {
-    ignoreBuildErrors: false,
-  },
-  // Tailwind CSS 自动优化
-  experimental: {
-    optimizeCss: true,
-  },
-};
-
-export default nextConfig;
-```
-
 ## 常见集成问题
 
-**Q: 服务端组件如何使用 Tailwind？**
-A: 直接在 JSX 中使用 Tailwind 类名，Next.js 会自动处理 CSS。
-
 **Q: 如何在客户端和服务端共享类型？**
-A: 使用 Zod schema 同时提供类型推断和验证，放在共享的 `lib/validators.ts` 中。
+A: 使用 Zod schema 同时提供类型推断和验证，放在 `lib/validators.ts`。
 
 **Q: TypeScript 路径别名在 Tailwind 配置中如何使用？**
 A: Tailwind 配置使用相对路径，不支持 TypeScript 路径别名。
@@ -372,4 +257,3 @@ A: Tailwind 配置使用相对路径，不支持 TypeScript 路径别名。
 
 - [Next.js TypeScript 文档](https://nextjs.org/docs/app/building-your-application/configuring/typescript)
 - [Zod 验证库](https://zod.dev/)
-- [Next.js + Tailwind CSS 指南](https://nextjs.org/docs/app/building-your-application/styling/tailwind-css)

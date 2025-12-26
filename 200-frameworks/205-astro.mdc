@@ -14,212 +14,35 @@ lastUpdated: 2025-11-21
 
 ## 适用场景
 
-- 内容驱动的网站
-- 静态站点生成（SSG）
-- 博客和文档站点
-- 营销网站和落地页
-- 电商产品展示页
-- 高性能 Web 应用
+- 内容驱动网站、静态站点生成（SSG）、高性能 Web 应用
 
 ## 核心内容
 
-Astro 开发的核心最佳实践，涵盖项目结构、组件设计、内容集合、Island 架构、性能优化等方面。
+零 JavaScript 默认、Island 架构、内容集合（Content Collections）、多框架集成。
 
 ## 关键原则
 
 - ✅ 零 JavaScript 默认（除非需要）
 - ✅ 使用 Island 架构实现交互
-- ✅ 优先使用 Astro 组件
 - ✅ 利用内容集合管理内容
-- ✅ 静态优先，按需 SSR
-- ✅ 使用文件路由系统
-- ✅ 优化图片和资源加载
+- ✅ 静态优先,按需 SSR
 
-## 项目结构
+## 关键决策点
 
-Astro 4+ 项目结构：
-
-```
-src/
-├── components/          # 可复用组件
-│   ├── Header.astro
-│   ├── Footer.astro
-│   └── ui/
-│       ├── Button.astro
-│       └── Card.astro
-├── layouts/             # 页面布局
-│   ├── BaseLayout.astro
-│   └── BlogLayout.astro
-├── pages/               # 文件路由
-│   ├── index.astro      # /
-│   ├── about.astro      # /about
-│   ├── blog/
-│   │   ├── index.astro  # /blog
-│   │   └── [slug].astro # /blog/post-1
-│   └── api/             # API 端点
-│       └── posts.json.ts
-├── content/             # 内容集合
-│   ├── blog/
-│   │   ├── post-1.md
-│   │   └── post-2.md
-│   └── config.ts
-├── styles/              # 全局样式
-│   └── global.css
-└── lib/                 # 工具函数
-    └── utils.ts
-
-public/                  # 静态资源
-├── favicon.svg
-└── images/
-
-astro.config.mjs         # Astro 配置
-```
-
-## Astro 组件
-
-Astro 组件是 `.astro` 文件，由三部分组成：
+### 1. Island 架构水合指令选择
 
 ```astro
----
-// 1. 组件脚本（Frontmatter）
-import Header from '../components/Header.astro';
-
-interface Props {
-  title: string;
-  description?: string;
-}
-
-const { title, description } = Astro.props;
-const currentYear = new Date().getFullYear();
----
-
-<!-- 2. 组件模板 -->
-<div class="page">
-  <Header />
-  <main>
-    <h1>{title}</h1>
-    {description && <p>{description}</p>}
-    <slot />
-  </main>
-  <footer>
-    <p>&copy; {currentYear}</p>
-  </footer>
-</div>
-
-<!-- 3. 组件样式 -->
-<style>
-  .page {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-
-  h1 {
-    font-size: 2.5rem;
-    color: var(--color-primary);
-  }
-</style>
+<!-- 立即加载（高优先级） -->
+<Counter client:load />
+<!-- 页面空闲时加载（推荐） -->
+<SearchBox client:idle />
+<!-- 可见时加载（懒加载） -->
+<Newsletter client:visible />
+<!-- 媒体查询匹配时 -->
+<MobileMenu client:media="(max-width: 768px)" />
 ```
 
-**组件最佳实践：**
-
-```astro
----
-// ✅ 使用 TypeScript 接口定义 Props
-interface Props {
-  title: string;
-  variant?: 'primary' | 'secondary';
-  size?: 'sm' | 'md' | 'lg';
-}
-
-const {
-  title,
-  variant = 'primary',
-  size = 'md'
-} = Astro.props;
-
-// ✅ 组件逻辑在 frontmatter 中
-const buttonClass = `btn btn-${variant} btn-${size}`;
----
-
-<button class={buttonClass}>
-  {title}
-  <slot />
-</button>
-
-<style>
-  /* ✅ 样式作用域自动限定到组件 */
-  .btn {
-    padding: 0.5rem 1rem;
-    border-radius: 0.25rem;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  .btn-primary {
-    background: var(--color-primary);
-    color: white;
-  }
-
-  .btn-secondary {
-    background: var(--color-secondary);
-    color: white;
-  }
-
-  .btn-sm { font-size: 0.875rem; }
-  .btn-md { font-size: 1rem; }
-  .btn-lg { font-size: 1.125rem; }
-</style>
-```
-
-## Island 架构
-
-Astro 使用 Island 架构实现部分水合（Partial Hydration）：
-
-```astro
----
-// 导入交互式组件（React、Vue、Svelte 等）
-import Counter from '../components/Counter.tsx';
-import SearchBox from '../components/SearchBox.vue';
----
-
-<div>
-  <h1>My Page</h1>
-
-  <!-- ✅ 静态内容（无 JavaScript） -->
-  <p>This is static content, no JS needed.</p>
-
-  <!-- ✅ 客户端水合指令 -->
-  <!-- 立即加载 -->
-  <Counter client:load />
-
-  <!-- 页面空闲时加载 -->
-  <SearchBox client:idle />
-
-  <!-- 可见时加载 -->
-  <Newsletter client:visible />
-
-  <!-- 媒体查询匹配时加载 -->
-  <MobileMenu client:media="(max-width: 768px)" />
-
-  <!-- 仅客户端渲染 -->
-  <Chart client:only="react" />
-</div>
-```
-
-**水合指令说明：**
-
-- `client:load` - 页面加载时立即水合（高优先级）
-- `client:idle` - 页面空闲时水合（推荐）
-- `client:visible` - 组件可见时水合（懒加载）
-- `client:media` - 媒体查询匹配时水合（响应式）
-- `client:only` - 仅客户端渲染，跳过 SSR
-
-## 内容集合
-
-内容集合是管理 Markdown/MDX 内容的最佳方式：
-
-**定义集合 Schema：**
+### 2. 内容集合 Schema 验证
 
 ```typescript
 // src/content/config.ts
@@ -229,70 +52,24 @@ const blogCollection = defineCollection({
   type: "content",
   schema: z.object({
     title: z.string(),
-    description: z.string(),
     publishDate: z.date(),
-    author: z.string(),
-    image: z.string().optional(),
     tags: z.array(z.string()),
     draft: z.boolean().default(false),
   }),
 });
 
-const docsCollection = defineCollection({
-  type: "content",
-  schema: z.object({
-    title: z.string(),
-    description: z.string(),
-    order: z.number(),
-  }),
-});
-
-export const collections = {
-  blog: blogCollection,
-  docs: docsCollection,
-};
+export const collections = { blog: blogCollection };
 ```
 
-**使用内容集合：**
-
-```astro
----
-// src/pages/blog/index.astro
-import { getCollection } from 'astro:content';
-
-// 获取所有博客文章
-const allPosts = await getCollection('blog');
-
-// 过滤和排序
-const publishedPosts = allPosts
-  .filter(post => !post.data.draft)
-  .sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf());
----
-
-<div class="blog-list">
-  {publishedPosts.map(post => (
-    <article>
-      <h2>
-        <a href={`/blog/${post.slug}`}>{post.data.title}</a>
-      </h2>
-      <p>{post.data.description}</p>
-      <time>{post.data.publishDate.toLocaleDateString()}</time>
-    </article>
-  ))}
-</div>
-```
-
-**动态路由渲染内容：**
+### 3. 动态路由渲染内容
 
 ```astro
 ---
 // src/pages/blog/[slug].astro
 import { getCollection } from 'astro:content';
-import BlogLayout from '../../layouts/BlogLayout.astro';
 
-// 生成所有文章路径
 export async function getStaticPaths() {
-  const posts = await getCollection('blog');
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
   return posts.map(post => ({
     params: { slug: post.slug },
     props: { post },
@@ -303,421 +80,57 @@ const { post } = Astro.props;
 const { Content } = await post.render();
 ---
 
-<BlogLayout title={post.data.title} description={post.data.description}>
-  <article>
-    <header>
-      <h1>{post.data.title}</h1>
-      <p class="meta">
-        By {post.data.author} on {post.data.publishDate.toLocaleDateString()}
-      </p>
-    </header>
-
-    <!-- 渲染 Markdown 内容 -->
-    <Content />
-
-    <footer>
-      <div class="tags">
-        {post.data.tags.map(tag => (
-          <a href={`/tags/${tag}`}>{tag}</a>
-        ))}
-      </div>
-    </footer>
-  </article>
-</BlogLayout>
+<article>
+  <h1>{post.data.title}</h1>
+  <Content />
+</article>
 ```
 
-## 布局组件
-
-**基础布局：**
-
-```astro
----
-// src/layouts/BaseLayout.astro
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-
-interface Props {
-  title: string;
-  description?: string;
-}
-
-const { title, description } = Astro.props;
----
-
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  {description && <meta name="description" content={description}>}
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-</head>
-<body>
-  <Header />
-  <main>
-    <slot />
-  </main>
-  <Footer />
-</body>
-</html>
-
-<style is:global>
-  :root {
-    --color-primary: #0066cc;
-    --color-secondary: #6c757d;
-  }
-
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  body {
-    font-family: system-ui, sans-serif;
-    line-height: 1.6;
-  }
-</style>
-```
-
-**嵌套布局：**
-
-```astro
----
-// src/layouts/BlogLayout.astro
-import BaseLayout from './BaseLayout.astro';
-
-interface Props {
-  title: string;
-  description: string;
-  author?: string;
-  publishDate?: Date;
-}
-
-const { title, description, author, publishDate } = Astro.props;
----
-
-<BaseLayout title={title} description={description}>
-  <article class="blog-post">
-    <header>
-      <h1>{title}</h1>
-      {author && publishDate && (
-        <p class="meta">
-          By {author} on {publishDate.toLocaleDateString()}
-        </p>
-      )}
-    </header>
-
-    <div class="content">
-      <slot />
-    </div>
-  </article>
-</BaseLayout>
-
-<style>
-  .blog-post {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-
-  .content {
-    margin-top: 2rem;
-  }
-</style>
-```
-
-## API 端点
-
-Astro 支持创建 API 端点：
-
-```typescript
-// src/pages/api/posts.json.ts
-import type { APIRoute } from "astro";
-import { getCollection } from "astro:content";
-
-export const GET: APIRoute = async ({ params, request }) => {
-  const posts = await getCollection("blog");
-
-  return new Response(
-    JSON.stringify(
-      posts.map((post) => ({
-        slug: post.slug,
-        title: post.data.title,
-        description: post.data.description,
-      }))
-    ),
-    {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
-};
-
-export const POST: APIRoute = async ({ request }) => {
-  const data = await request.json();
-
-  // 处理数据
-
-  return new Response(JSON.stringify({ success: true }), {
-    status: 201,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-};
-```
-
-## 图片优化
-
-Astro 提供内置的图片优化：
+### 4. 图片优化
 
 ```astro
 ---
 import { Image } from 'astro:assets';
-import heroImage from '../assets/hero.jpg';
+import hero from '../assets/hero.jpg';
 ---
 
-<!-- ✅ 本地图片（自动优化） -->
-<Image
-  src={heroImage}
-  alt="Hero"
-  width={800}
-  height={400}
-  format="webp"
-  quality={80}
-/>
-
-<!-- ✅ 远程图片 -->
-<Image
-  src="https://example.com/image.jpg"
-  alt="Remote"
-  width={600}
-  height={300}
-  inferSize
-/>
-
-<!-- ✅ 响应式图片 -->
-<Image
-  src={heroImage}
-  alt="Responsive"
-  widths={[400, 800, 1200]}
-  sizes="(max-width: 800px) 100vw, 800px"
-/>
+<Image src={hero} alt="Hero" width={800} format="webp" />
 ```
 
-## 样式方案
-
-**作用域样式（推荐）：**
-
-```astro
-<style>
-  /* 自动限定到组件作用域 */
-  h1 { color: blue; }
-</style>
-```
-
-**全局样式：**
-
-```astro
-<style is:global>
-  /* 全局样式 */
-  body { margin: 0; }
-</style>
-```
-
-**CSS 模块：**
-
-```astro
----
-import styles from './Button.module.css';
----
-
-<button class={styles.button}>
-  Click me
-</button>
-```
-
-**Tailwind CSS 集成：**
-
-```bash
-npx astro add tailwind
-```
-
-```astro
----
-// 自动配置，直接使用
----
-
-<div class="max-w-4xl mx-auto p-4">
-  <h1 class="text-3xl font-bold">Hello</h1>
-</div>
-```
-
-## 集成其他框架
-
-Astro 支持多框架集成：
-
-```bash
-# 添加 React
-npx astro add react
-
-# 添加 Vue
-npx astro add vue
-
-# 添加 Svelte
-npx astro add svelte
-
-# 添加 Solid
-npx astro add solid
-```
-
-**使用示例：**
-
-```astro
----
-import ReactCounter from './Counter.tsx';
-import VueSearch from './Search.vue';
-import SvelteChart from './Chart.svelte';
----
-
-<div>
-  <!-- 混合使用不同框架 -->
-  <ReactCounter client:load />
-  <VueSearch client:idle />
-  <SvelteChart client:visible />
-</div>
-```
-
-## SSR 和部署模式
-
-**静态模式（默认）：**
+### 5. 混合渲染模式
 
 ```javascript
 // astro.config.mjs
 export default defineConfig({
-  output: "static", // 默认
-});
-```
-
-**服务端渲染模式：**
-
-```javascript
-// astro.config.mjs
-export default defineConfig({
-  output: "server",
-  adapter: vercel(), // 或 netlify(), node() 等
-});
-```
-
-**混合模式（推荐）：**
-
-```javascript
-// astro.config.mjs
-export default defineConfig({
-  output: "hybrid", // 默认静态，按需 SSR
+  output: "hybrid", // 默认静态,按需 SSR
 });
 
 // 页面级别选择
-export const prerender = false; // 启用 SSR
+export const prerender = false; // 此页面使用 SSR
 ```
 
-## 性能优化
-
-**代码分割：**
-
-```astro
----
-// ✅ 动态导入大型组件
-const HeavyComponent = Astro.glob('../components/Heavy.astro');
----
-```
-
-**预取链接：**
-
-```astro
----
-import { ViewTransitions } from 'astro:transitions';
----
-
-<head>
-  <!-- 启用视图转换和预取 -->
-  <ViewTransitions />
-</head>
-
-<!-- 自动预取链接 -->
-<a href="/about">About</a>
-```
-
-**优化第三方脚本：**
-
-```astro
-<!-- ✅ 延迟加载非关键脚本 -->
-<script is:inline defer src="/analytics.js"></script>
-
-<!-- ✅ Partytown 在 Web Worker 中运行 -->
-<script type="text/partytown" src="/tracking.js"></script>
-```
-
-## 环境变量
-
-```bash
-# .env
-PUBLIC_API_URL=https://api.example.com
-SECRET_API_KEY=secret123
-```
-
-```astro
----
-// 公开变量（客户端可访问）
-const apiUrl = import.meta.env.PUBLIC_API_URL;
-
-// 私密变量（仅服务端）
-const apiKey = import.meta.env.SECRET_API_KEY;
----
-```
-
-## 工具配置
-
-**astro.config.mjs：**
+## 项目特定配置
 
 ```javascript
+// astro.config.mjs
 import { defineConfig } from "astro/config";
 import tailwind from "@astrojs/tailwind";
-import react from "@astrojs/react";
-import sitemap from "@astrojs/sitemap";
 
 export default defineConfig({
   site: "https://example.com",
-  integrations: [tailwind(), react(), sitemap()],
-  vite: {
-    optimizeDeps: {
-      exclude: ["some-package"],
-    },
-  },
+  integrations: [tailwind()],
 });
 ```
 
 ## 常见问题
 
-**Q: Astro 与 Next.js 的区别？**
-A: Astro 默认零 JavaScript，专注内容站点；Next.js 是全栈 React 框架，适合应用开发。
-
 **Q: 何时使用 Island 架构？**
-A: 仅在需要交互时使用，保持大部分内容静态以获得最佳性能。
-
-**Q: 如何选择水合指令？**
-A: 优先使用 `client:idle` 或 `client:visible`，避免过度使用 `client:load`。
+A: 仅需要交互时使用。优先 `client:idle` 或 `client:visible`,避免过度 `client:load`。
 
 **Q: 内容集合 vs 手动导入 Markdown？**
-A: 内容集合提供类型安全、Schema 验证和更好的开发体验，推荐使用。
+A: 内容集合提供类型安全、Schema 验证,推荐使用。
 
 ## 扩展阅读
 
 - [Astro 官方文档](https://docs.astro.build/)
-- [Astro Island 架构](https://docs.astro.build/en/concepts/islands/)
-- [内容集合指南](https://docs.astro.build/en/guides/content-collections/)
-- [Astro 主题和模板](https://astro.build/themes/)
+- [Island 架构](https://docs.astro.build/en/concepts/islands/)

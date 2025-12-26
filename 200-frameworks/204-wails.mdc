@@ -16,388 +16,90 @@ lastUpdated: 2025-11-26
 
 Wails 3 桌面应用（Windows/macOS/Linux），Go 后端 + Web 前端
 
+## 核心内容
+
+服务自动绑定、Taskfile 构建、窗口管理、资源嵌入、单实例控制。
+
 ## 关键原则
 
-- ✅ 导出方法自动绑定到 TypeScript（首字母大写即可，无需 `context.Context`）
-- ✅ `//go:embed all:frontend/dist` 嵌入前端（`all:` 必需，包含隐藏文件）
-- ✅ 使用 Taskfile.yml 管理构建（非 Makefile）
-- ✅ macOS 必须设置 `MACOSX_DEPLOYMENT_TARGET` + CGO 环境变量
-- ✅ 通过 `-ldflags "-X main.version={{.GIT_VERSION}}"` 注入版本号
+- ✅ 导出方法自动绑定（首字母大写）
+- ✅ `//go:embed all:frontend/dist` 嵌入前端
+- ✅ 使用 Taskfile.yml 管理构建
+- ✅ macOS 必须设置 `MACOSX_DEPLOYMENT_TARGET`
+- ✅ 通过 `-ldflags` 注入版本号
 
-## 项目结构
+## 关键决策点
 
-```
-myapp/
-├── main.go
-├── internal/services/         # Go 服务（自动绑定）
-├── frontend/src/bindings/     # 自动生成（勿修改）
-├── build/
-│   ├── config.yml            # 应用元信息 + 开发模式
-│   ├── Taskfile.yml          # 公共任务
-│   └── {darwin,windows,linux}/Taskfile.yml
-└── Taskfile.yml
-```
-
-## 服务绑定规则
-
-- 导出方法（首字母大写）→ 自动生成 TS 绑定
-- 返回值支持：单值、`(value, error)`、`error`
-- 生命周期钩子：`ServiceStartup` / `ServiceShutdown`（可选）
-- 绑定命令：`wails3 generate bindings -clean=true -ts`
-- Taskfile 自动链：`build:frontend` 依赖 `generate:bindings`
-
-## 构建配置要点
-
-**版本注入：**
-
-- `main.go`: `var version string`
-- Taskfile: `GIT_VERSION: {sh: 'git describe --tags --always --dirty'}`
-- ldflags: `-X main.version={{.GIT_VERSION}}`
-
-**macOS 必需环境变量：**
-
-- `CGO_CFLAGS: "-mmacosx-version-min=10.15"`
-- `CGO_LDFLAGS: "-mmacosx-version-min=10.15"`
-- `MACOSX_DEPLOYMENT_TARGET: "10.15"`
-
-**体积优化：**
-
-- `-ldflags="-s -w"` 去除调试信息
-- `-trimpath` 去除路径
-- `-buildvcs=false` 去除 VCS 信息
-
-**通用二进制（macOS）：**
-
-- 分别构建 arm64 + amd64
-- `lipo -create` 合并
-
-## 窗口管理
-
-**单实例控制：**
-
-- `SingleInstance.UniqueID` 必须唯一（与 `productIdentifier` 一致）
-- `EncryptionKey` 必须 32 字节
-- `OnSecondInstanceLaunch` 唤醒窗口（`window.Show()` + `window.Focus()`）
-
-**macOS 特性：**
-
-- 无标题栏：`TitleBar: MacTitleBarHiddenInset`
-- 托盘模式：`ApplicationShouldTerminateAfterLastWindowClosed: false`
-- 按钮控制：`MaximiseButtonState`、`CloseButtonState`
-
-## 资源嵌入
-
-- 前端：`//go:embed all:frontend/dist`（`all:` 必需）
-- 其他：`//go:embed` 在 `internal/assets/` 单独包中
-
-## HTTP 服务器（可选）
-
-- 用途：文件上传、SSE、WebSocket（服务绑定不支持）
-- 监听：`127.0.0.1:端口`（避免外网）
-
-## 跨平台差异
-
-- 优先构建标签：`//go:build windows` / `//go:build !windows`
-- 文件命名：`*_windows.go` / `*_other.go`
-- 避免运行时 `if runtime.GOOS`
-
-## 开发模式执行顺序
-
-build/config.yml 中 `executes` 类型：
-
-1. `once` - 仅首次（安装依赖）
-2. `background` - 后台（Vite 服务器）
-3. `blocking` - 阻塞（Go 编译）
-4. `primary` - 主进程（重启时杀掉其他）
-
-## 应用重启（自更新）
-
-- 环境变量标识：`APP_RESTART=true`
-- 新进程启动后 `os.Exit(0)`
-- main.go 检测延迟 1 秒
-
-## 常见陷阱
-
-**❌ 绑定失败** - 方法未导出或返回值不符合规范
-**❌ 前端 404** - 缺少 `all:` 前缀
-**❌ 单实例失效** - UniqueID 不唯一、EncryptionKey 非 32 字节、macOS 未签名
-**❌ macOS 编译错误** - 未设置 `MACOSX_DEPLOYMENT_TARGET`
-**❌ 绑定未更新** - Taskfile 依赖链错误
-
-## 扩展阅读
-
-- [Wails 3 官方文档](https://v3alpha.wails.io/)
-- [Taskfile 语法](https://taskfile.dev/)
-
-## 项目结构
-
-```
-myapp/
-├── main.go                     # application.New() + 窗口创建
-├── internal/
-│   ├── services/               # Go 服务（自动绑定）
-│   │   └── app_service.go
-│   ├── initializer/            # 应用上下文初始化
-│   └── ...                     # 其他业务逻辑
-├── frontend/
-│   ├── src/
-│   │   └── bindings/           # 自动生成的 TS 绑定
-│   └── package.json
-├── build/
-│   ├── Taskfile.yml            # 公共任务（前端构建、绑定生成）
-│   ├── config.yml              # 开发模式配置 + 应用元信息
-│   ├── darwin/Taskfile.yml     # macOS 特定构建
-│   ├── windows/Taskfile.yml    # Windows 特定构建
-│   └── linux/Taskfile.yml      # Linux 特定构建
-└── Taskfile.yml                # 根任务：dev/build/package
-```
-
-## 服务绑定（核心差异）
-
-**Go 服务自动映射规则：**
-
-- 导出方法（首字母大写）+ `context.Context` 第一参数 → 自动绑定
-- 返回值支持：单值、`(value, error)`、`error`
-- 复杂类型自动生成 TypeScript interface
+### 1. 服务绑定规则
 
 ```go
-// internal/services/app_service.go
+// 导出方法自动绑定
 type AppService struct {
-    appCtx *initializer.AppContext  // 应用上下文（配置、日志、DB等）
+    appCtx *AppContext
 }
 
-func NewAppService(appCtx *initializer.AppContext) *AppService {
-    return &AppService{appCtx: appCtx}
-}
-
-// ✅ 会绑定：导出方法
+// ✅ 会绑定（首字母大写）
 func (a *AppService) GetConfig() (string, error) {
-    content, err := config.GetConfigFromFile(a.appCtx.ConfigPath)
-    return content, err
+    return config.GetConfigFromFile(a.appCtx.ConfigPath)
 }
 
-// ✅ 会绑定：返回结构体指针
-func (a *AppService) GetAppInfo() (*AppInfo, error) {
-    return &AppInfo{AppVersion: a.appCtx.AppVersion}, nil
-}
-
-// ❌ 不会绑定：非导出
+// ❌ 不会绑定（非导出）
 func (a *AppService) helper() {}
 ```
 
-**服务生命周期钩子（可选）：**
-
-```go
-// ServiceStartup 在服务启动时调用
-func (a *AppService) ServiceStartup(ctx context.Context, opts application.ServiceOptions) {
-    a.ctx = ctx  // 保存 context
-}
-
-// ServiceShutdown 在应用关闭时调用
-func (a *AppService) ServiceShutdown(ctx context.Context, opts application.ServiceOptions) {
-    if a.appCtx.DB != nil {
-        a.appCtx.DB.Close()  // 清理资源
-    }
-}
-```
-
-**注册服务：**
+### 2. 版本号注入
 
 ```go
 // main.go
-appService := services.NewAppService(appCtx)
+var version string  // 通过 ldflags 注入
 
-app := application.New(application.Options{
-    Services: []application.Service{
-        application.NewService(appService),
-    },
-})
-```
-
-**生成绑定（Taskfile 自动触发）：**
-
-```bash
-wails3 generate bindings -f '{{.BUILD_FLAGS}}' -clean=true -ts
-```
-
-**前端使用：**
-
-```typescript
-import { AppService } from "./bindings";
-
-const appInfo = await AppService.GetAppInfo(); // 类型安全
-console.log(appInfo.appVersion);
-```
-
-## 构建配置（Wails 特定）
-
-**根 Taskfile.yml（版本注入）：**
-
-```yaml
-version: "3"
-includes:
-  common: ./build/Taskfile.yml
-  darwin: ./build/darwin/Taskfile.yml
-
+// Taskfile
 vars:
-  APP_NAME: "myapp"
-  GIT_VERSION:
-    sh: "git describe --tags --always --dirty" # 动态获取版本
-
-tasks:
-  dev:
-    cmds:
-      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
-
-  build:
-    cmds:
-      - task: "{{OS}}:build" # 自动选择平台
-```
-
-**build/Taskfile.yml（关键任务依赖链）：**
-
-```yaml
-tasks:
-  generate:bindings:
-    deps:
-      - task: go:mod:tidy
-    sources:
-      - "**/*.go"
-      - go.mod
-    generates:
-      - "frontend/bindings/**/*"
-    cmds:
-      - wails3 generate bindings -f '{{.BUILD_FLAGS}}' -clean=true -ts
-
-  build:frontend:
-    deps:
-      - task: install:frontend:deps
-      - task: generate:bindings # ⚠️ 前端构建前必须生成绑定
-    cmds:
-      - npm run {{.BUILD_COMMAND}}
-    env:
-      PRODUCTION: '{{.PRODUCTION | default "false"}}'
-```
-
-**macOS 构建配置（build/darwin/Taskfile.yml）：**
-
-```yaml
+  GIT_VERSION: {sh: 'git describe --tags --always'}
+  
 tasks:
   build:
-    deps:
-      - task: common:build:frontend
-      - task: common:generate:icons
     cmds:
-      - go build {{.BUILD_FLAGS}} -o {{.OUTPUT}}
-    vars:
-      BUILD_FLAGS: '-trimpath -buildvcs=false -ldflags="-X main.version={{.GIT_VERSION}} -w -s"'
-      OUTPUT: "{{.BIN_DIR}}/{{.APP_NAME}}-{{.OS}}-{{.ARCH}}"
-    env:
-      GOOS: darwin
-      CGO_ENABLED: 1
-      GOARCH: "{{.ARCH | default ARCH}}"
-      CGO_CFLAGS: "-mmacosx-version-min=10.15" # ⚠️ macOS 最低版本
-      CGO_LDFLAGS: "-mmacosx-version-min=10.15"
-      MACOSX_DEPLOYMENT_TARGET: "10.15"
-
-  build:universal:
-    summary: 构建 macOS 通用二进制（arm64 + amd64）
-    deps:
-      - task: build
-        vars: { ARCH: amd64, OUTPUT: "{{.BIN_DIR}}/{{.APP_NAME}}-amd64" }
-      - task: build
-        vars: { ARCH: arm64, OUTPUT: "{{.BIN_DIR}}/{{.APP_NAME}}-arm64" }
-    cmds:
-      - lipo -create -output "{{.BIN_DIR}}/{{.APP_NAME}}"
-        "{{.BIN_DIR}}/{{.APP_NAME}}-amd64"
-        "{{.BIN_DIR}}/{{.APP_NAME}}-arm64"
-      - rm "{{.BIN_DIR}}/{{.APP_NAME}}-amd64" "{{.BIN_DIR}}/{{.APP_NAME}}-arm64"
+      - go build -ldflags="-X main.version={{.GIT_VERSION}}" -o {{.OUTPUT}}
 ```
 
-**应用元信息配置（build/config.yml）：**
-
-```yaml
-version: "3"
-
-info:
-  companyName: "ygqygq2"
-  productName: "easy-check"
-  productIdentifier: "com.ygqygq2.easy-check" # ⚠️ 单实例需要唯一标识
-  description: "简单网络工具"
-  copyright: "(c) 2025, ygqygq2"
-  version: "v3.0.1"
-
-dev_mode:
-  executes:
-    - cmd: wails3 task common:install:frontend:deps
-      type: once # 仅首次运行
-    - cmd: wails3 task common:dev:frontend
-      type: background # Vite 开发服务器
-    - cmd: go mod tidy
-      type: blocking # Go 编译前执行
-    - cmd: wails3 task build
-      type: blocking # 编译完成后才启动
-    - cmd: wails3 task run
-      type: primary # 主进程（重启时杀掉其他）
-```
-
-## 窗口管理与单实例控制
-
-**单实例应用（防止多开）：**
+### 3. 单实例控制
 
 ```go
 var encryptionKey = [32]byte{ /* 32字节密钥 */ }
 
 app := application.New(application.Options{
     SingleInstance: &application.SingleInstanceOptions{
-        UniqueID:      "com.ygqygq2.easy-check",  // ⚠️ 必须唯一（与 productIdentifier 一致）
-        EncryptionKey: encryptionKey,             // ⚠️ 进程间通信加密
+        UniqueID:      "com.ygqygq2.app",  // ⚠️ 必须唯一
+        EncryptionKey: encryptionKey,       // ⚠️ 必须32字节
         OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
-            // 第二次启动时唤醒已有窗口
-            if window != nil {
-                window.EmitEvent("secondInstanceLaunched", data)
-                window.Show()
-                window.Focus()
-            }
+            window.Show()
+            window.Focus()
         },
     },
 })
 ```
 
-**窗口配置：**
+### 4. macOS 构建配置
 
-```go
-window := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
-    Title:  "Easy Check",
-    Width:  1024,
-    Height: 768,
-    Mac: application.MacWindow{
-        InvisibleTitleBarHeight: 50,                      // 自定义拖拽区域高度
-        Backdrop:                application.MacBackdropTranslucent,  // 毛玻璃效果
-        TitleBar:                application.MacTitleBarHiddenInset,  // 隐藏标题栏
-    },
-    BackgroundColour:    application.NewRGB(27, 38, 54),  // 窗口背景色
-    URL:                 "/",
-    MinimiseButtonState: application.ButtonEnabled,
-    MaximiseButtonState: application.ButtonDisabled,      // 禁用最大化按钮
-    CloseButtonState:    application.ButtonDisabled,      // 禁用关闭按钮（托盘应用）
-})
+```yaml
+# build/darwin/Taskfile.yml
+tasks:
+  build:
+    cmds:
+      - go build {{.BUILD_FLAGS}} -o {{.OUTPUT}}
+    vars:
+      BUILD_FLAGS: '-trimpath -ldflags="-X main.version={{.GIT_VERSION}} -s -w"'
+    env:
+      CGO_CFLAGS: "-mmacosx-version-min=10.15"
+      CGO_LDFLAGS: "-mmacosx-version-min=10.15"
+      MACOSX_DEPLOYMENT_TARGET: "10.15"  # ⚠️ 必需
 ```
 
-**macOS 应用行为：**
+### 5. 资源嵌入
 
 ```go
-Mac: application.MacOptions{
-    ApplicationShouldTerminateAfterLastWindowClosed: false,  // 关闭窗口不退出（托盘模式）
-}
-```
-
-## 资源嵌入
-
-**前端资源嵌入（注意 `all:` 前缀）：**
-
-```go
-//go:embed all:frontend/dist  // ⚠️ all: 包含隐藏文件（.vite等）
+//go:embed all:frontend/dist  // ⚠️ all: 包含隐藏文件
 var frontendAssets embed.FS
 
 app := application.New(application.Options{
@@ -407,139 +109,33 @@ app := application.New(application.Options{
 })
 ```
 
-**其他资源嵌入：**
+## 项目特定配置
 
-```go
-// internal/assets/assets.go
-//go:embed images/*.png
-var assetsFS embed.FS
-
-func GetAsset(path string) ([]byte, error) {
-    return assetsFS.ReadFile(path)
-}
-
-// 在应用中使用
-logo, err := assets.GetAsset("images/logo.png")
-sysTray.SetIcon(logo)
-```
-
-## HTTP 服务器（可选）
-
-**嵌入 HTTP 服务器（本地 API）：**
-
-```go
-// 注册 HTTP 路由
-router.RegisterRoutes(appCtx)  // 注册业务路由到 http.DefaultServeMux
-
-// 启动本地 HTTP 服务器
-go func() {
-    if err := http.ListenAndServe("127.0.0.1:32180", nil); err != nil {
-        appCtx.Logger.Fatalf("Server failed: %v", err)
-    }
-}()
-```
-
-**为什么需要：** Wails 服务绑定不支持文件上传、SSE、WebSocket 等，用 HTTP 服务器补充。
-
-## 关键决策点
-
-### 版本号注入
-
-**通过 ldflags 注入版本号：**
-
-```go
-// main.go
-var version string  // 通过 ldflags 注入
-
-func main() {
-    if version == "" {
-        version = "dev"  // 开发模式默认值
-    }
-    fmt.Printf("App version: %s\n", version)
-}
-```
-
-**Taskfile 配置：**
+**build/config.yml（开发模式）：**
 
 ```yaml
-vars:
-  GIT_VERSION:
-    sh: "git describe --tags --always --dirty"
-
-tasks:
-  build:
-    cmds:
-      - go build -ldflags="-X main.version={{.GIT_VERSION}}" -o {{.OUTPUT}}
-```
-
-### 应用重启（自更新场景）
-
-```go
-func RestartApp() error {
-    executable, err := os.Executable()
-    if err != nil {
-        return err
-    }
-
-    // 设置环境变量标识重启
-    cmd := exec.Command(executable, os.Args[1:]...)
-    cmd.Env = append(os.Environ(), "APP_RESTART=true")
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-
-    if err := cmd.Start(); err != nil {
-        return err
-    }
-
-    os.Exit(0)
-    return nil
-}
-
-// main.go 中检测
-if os.Getenv("APP_RESTART") == "true" {
-    time.Sleep(1 * time.Second)  // 等待旧进程退出
-}
-```
-
-### 跨平台差异处理（构建标签）
-
-```go
-// internal/services/autostart_windows.go
-//go:build windows
-
-package services
-
-func (a *AppService) EnableAutoStart(ctx context.Context) error {
-    // Windows 注册表实现
-}
-
-// internal/services/autostart_other.go
-//go:build !windows
-
-func (a *AppService) EnableAutoStart(ctx context.Context) error {
-    // macOS/Linux 实现
-}
+dev_mode:
+  executes:
+    - cmd: wails3 task common:install:frontend:deps
+      type: once
+    - cmd: wails3 task common:dev:frontend
+      type: background  # Vite 服务器
+    - cmd: wails3 task build
+      type: blocking
+    - cmd: wails3 task run
+      type: primary  # 主进程
 ```
 
 ## 常见问题
 
-**Q: 修改 Go 服务后前端类型不更新？**
-A: 手动运行 `wails3 generate bindings -clean=true -ts`（开发模式应自动触发，检查 build/config.yml 的 `executes` 配置）。
+**Q: 服务方法未绑定？**
+A: 检查方法首字母大写,已运行 `wails3 generate bindings`。
 
-**Q: macOS 编译报错 "ld: warning: object file was built for newer macOS version"？**
-A: 在 build/darwin/Taskfile.yml 中设置 `MACOSX_DEPLOYMENT_TARGET: "10.15"`（或更低版本）。
+**Q: macOS 编译报错 "ld: warning"？**
+A: 设置 `MACOSX_DEPLOYMENT_TARGET: "10.15"`。
 
-**Q: 服务方法未绑定到前端？**
-A: 检查：1) 方法首字母大写 2) 第一参数为 `context.Context` 3) 已运行 `wails3 generate bindings`。
-
-**Q: 前端资源加载失败（404）？**
-A: 确保使用 `//go:embed all:frontend/dist`（注意 `all:` 前缀，包含隐藏文件）。
-
-**Q: 单实例不生效，可以多次启动？**
-A: 检查：1) `UniqueID` 是否唯一 2) `EncryptionKey` 是否为 32 字节 3) macOS 需要签名。
-
-**Q: 体积优化？**
-A: Go 编译使用 `-ldflags="-s -w"` + `-trimpath`，前端使用 Vite tree-shaking。
+**Q: 前端404？**
+A: 确保使用 `//go:embed all:frontend/dist`（注意 `all:` 前缀）。
 
 ## 扩展阅读
 

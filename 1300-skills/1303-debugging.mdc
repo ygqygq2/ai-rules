@@ -2,7 +2,7 @@
 id: 1303
 title: Debugging Skills
 description: Effective debugging techniques and strategies
-globs: ['**/*']
+globs: ["**/*"]
 priority: high
 tags: [debugging, skills, troubleshooting, problem-solving]
 version: 1.0.0
@@ -14,70 +14,17 @@ lastUpdated: 2025-12-18
 
 ## Systematic Approach
 
-### 1. Reproduce the Issue
+1. **复现问题**：记录步骤、环境因素、最小复现用例
+2. **收集信息**：战略性日志、debugger 语句、堆栈追踪
+3. **形成假设**：可能原因、最近变更、数据流
+4. **测试验证**：一次一个变更、git bisect、断言验证
 
-- Document exact steps to reproduce
-- Identify environmental factors (OS, browser, dependencies)
-- Create minimal reproduction case
-- Verify issue exists in clean environment
-
-### 2. Gather Information
-
-```typescript
-// Add strategic logging
-console.log('Input:', input);
-console.log('State before:', state);
-console.log('State after:', newState);
-console.log('Stack trace:', new Error().stack);
-
-// Use debugger statements
-function problematicFunction(data: any) {
-  debugger; // Execution will pause here
-  return processData(data);
-}
-```
-
-### 3. Form Hypothesis
-
-- What could cause this behavior?
-- What changed recently?
-- What assumptions am I making?
-- What are the data flows?
-
-### 4. Test and Validate
-
-- Test one change at a time
-- Use binary search for regression (git bisect)
-- Validate assumptions with assertions
-- Document findings
-
-## Debugging Tools
-
-### Browser DevTools
-
-```javascript
-// Console API
-console.log('Basic logging');
-console.table([{ name: 'Alice', age: 30 }]);
-console.time('operation');
-// ... code ...
-console.timeEnd('operation');
-console.trace('Call stack');
-
-// Breakpoints
-// - Line breakpoints
-// - Conditional breakpoints: `x > 100`
-// - Logpoints: Non-breaking console.log
-
-// Network tab
-// - Check request/response
-// - Monitor timing
-// - Inspect headers and payloads
-```
+## 项目调试工具配置
 
 ### VS Code Debugger
 
 ```json
+// .vscode/launch.json
 {
   "version": "0.2.0",
   "configurations": [
@@ -94,68 +41,36 @@ console.trace('Call stack');
 }
 ```
 
-### Command Line Tools
+### 关键命令
 
 ```bash
-# Node.js debugging
+# Node.js 调试
 node --inspect-brk index.js
 
-# Memory profiling
-node --inspect --heap-prof index.js
-
-# Python debugging
-python -m pdb script.py
-
-# Git bisect for regression
-git bisect start
-git bisect bad HEAD
-git bisect good v1.0.0
-# Test each commit
-git bisect good/bad
-git bisect reset
+# Git bisect 定位回归
+git bisect start && git bisect bad HEAD && git bisect good v1.0.0
 ```
 
-## Common Debugging Scenarios
+## 常见问题模式
 
-### Memory Leaks
+### 内存泄漏
 
 ```typescript
-// Check for detached DOM nodes
-// - Use Chrome DevTools Memory profiler
-// - Take heap snapshots
-// - Compare snapshots to find retained objects
+// 移除事件监听器
+window.addEventListener("resize", handler);
+window.removeEventListener("resize", handler);
 
-// Common causes:
-// 1. Event listeners not removed
-window.addEventListener('resize', handler);
-// Later: window.removeEventListener('resize', handler);
-
-// 2. Timers not cleared
+// 清理定时器
 const timerId = setInterval(fn, 1000);
-// Later: clearInterval(timerId);
-
-// 3. Closures holding references
-function createHandler() {
-  const largeData = new Array(1000000);
-  return () => {
-    // largeData is kept in memory
-    console.log(largeData.length);
-  };
-}
+clearInterval(timerId);
 ```
 
-### Race Conditions
+### 竞态条件
 
 ```typescript
-// Add synchronization
 let isProcessing = false;
-
 async function handleClick() {
-  if (isProcessing) {
-    console.warn('Already processing');
-    return;
-  }
-
+  if (isProcessing) return;
   isProcessing = true;
   try {
     await processData();
@@ -163,103 +78,31 @@ async function handleClick() {
     isProcessing = false;
   }
 }
-
-// Use Promise.all for concurrent operations
-await Promise.all([fetchUserData(), fetchSettings(), fetchPermissions()]);
 ```
 
-### Type Errors
+### 类型错误
 
 ```typescript
-// Add runtime validation
-function processUser(user: unknown) {
-  if (!isUser(user)) {
-    throw new TypeError('Invalid user object');
-  }
-  // user is User type here
-  return user.name;
-}
-
 function isUser(obj: unknown): obj is User {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'name' in obj &&
-    typeof obj.name === 'string'
-  );
+  return typeof obj === "object" && obj !== null && "name" in obj;
 }
 ```
 
-## Best Practices
-
-### 1. Write Debuggable Code
+## 项目日志规范
 
 ```typescript
-// Good: Clear, debuggable
-function processOrders(orders: Order[]): ProcessedOrder[] {
-  const validOrders = validateOrders(orders);
-  const enrichedOrders = enrichOrders(validOrders);
-  const sortedOrders = sortOrders(enrichedOrders);
-  return sortedOrders;
-}
+import { Logger } from "@ygqygq2/vscode-log";
 
-// Bad: Hard to debug
-function processOrders(orders: Order[]): ProcessedOrder[] {
-  return sortOrders(enrichOrders(validateOrders(orders)));
-}
-```
-
-### 2. Add Assertions
-
-```typescript
-function divide(a: number, b: number): number {
-  console.assert(b !== 0, 'Division by zero');
-  console.assert(isFinite(a) && isFinite(b), 'Invalid numbers');
-  return a / b;
-}
-```
-
-### 3. Use Error Boundaries
-
-```typescript
-// React error boundary
-class ErrorBoundary extends React.Component {
-  componentDidCatch(error: Error, info: any) {
-    console.error('Error caught:', error);
-    console.error('Component stack:', info.componentStack);
-    // Log to error reporting service
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return <ErrorFallback />;
-    }
-    return this.props.children;
-  }
-}
-```
-
-### 4. Structured Logging
-
-```typescript
-import { Logger } from '@ygqygq2/vscode-log';
-
-const logger = new Logger('MyModule');
+const logger = new Logger("MyModule");
 
 function processData(data: any) {
-  logger.info('Processing started', {
-    dataSize: data.length,
-    timestamp: Date.now(),
-  });
-
+  logger.info("Processing started", { dataSize: data.length });
   try {
     const result = transform(data);
-    logger.info('Processing completed', {
-      resultSize: result.length,
-    });
+    logger.info("Processing completed", { resultSize: result.length });
     return result;
   } catch (error) {
-    logger.error('Processing failed', {
+    logger.error("Processing failed", {
       error: error.message,
       stack: error.stack,
       data: JSON.stringify(data).slice(0, 100),
@@ -269,48 +112,20 @@ function processData(data: any) {
 }
 ```
 
-## Advanced Techniques
-
-### Performance Debugging
+## 性能分析
 
 ```typescript
-// Use Performance API
-performance.mark('start-operation');
+// Performance API
+performance.mark("start");
 await expensiveOperation();
-performance.mark('end-operation');
-performance.measure('operation-time', 'start-operation', 'end-operation');
+performance.mark("end");
+performance.measure("op", "start", "end");
 
-const measures = performance.getEntriesByType('measure');
-console.log('Duration:', measures[0].duration);
-```
-
-### Network Debugging
-
-```typescript
-// Add request interceptor
+// Network 请求拦截器
 async function fetchWithLogging(url: string, options?: RequestInit) {
-  const requestId = Math.random().toString(36);
-  console.log(`[${requestId}] Request:`, url, options);
-
   const start = performance.now();
-  try {
-    const response = await fetch(url, options);
-    const duration = performance.now() - start;
-    console.log(`[${requestId}] Response:`, {
-      status: response.status,
-      duration: `${duration}ms`,
-    });
-    return response;
-  } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
-    throw error;
-  }
+  const response = await fetch(url, options);
+  console.log(`[${url}] ${performance.now() - start}ms`);
+  return response;
 }
 ```
-
-## Resources
-
-- Chrome DevTools Documentation
-- VS Code Debugging Guide
-- Node.js Debugging Guide
-- Performance profiling tools
