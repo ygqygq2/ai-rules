@@ -1,132 +1,101 @@
 ---
 id: 1101
-title: Git 工作流最佳实践
-description: Git 分支策略、提交规范和团队协作的最佳实践
+title: Git 工作流规范
+description: Git 分支策略、提交规范和 AI 操作限制
 globs: ["**/.git/**", "**/.gitignore", "**/.gitattributes"]
-priority: medium
-tags: [git, version-control, branching, commit-convention, workflow]
-version: 1.0.0
+priority: high
+tags: [git, workflow, commit-convention, ai-safety]
+version: 2.0.0
 author: Turbo AI Rules
-lastUpdated: 2025-11-20
+lastUpdated: 2026-01-09
 ---
 
-# Git 工作流最佳实践
+# Git 工作流规范
 
 ## 适用场景
 
-- 团队协作开发、版本控制管理、代码审查流程
+- 团队协作开发、AI 辅助编程、版本控制管理
 
 ## 核心内容
 
-GitHub Flow（推荐）、Conventional Commits 提交规范、PR 流程、Husky + lint-staged 自动化。
+GitHub Flow 分支策略、Conventional Commits、严格的 AI 操作限制。
+
+## 🚫 AI 操作限制（最高优先级）
+
+**禁止 AI 自动执行以下操作，必须获得明确授权：**
+
+- ❌ `git commit` - 禁止自动提交
+- ❌ `git push` - 禁止自动推送
+- ❌ `git merge` - 禁止自动合并
+- ❌ `git rebase` - 禁止自动变基
+- ❌ `git reset --hard` - 禁止强制重置
+- ❌ `git push --force` - 禁止强制推送
+
+**AI 必须遵守的流程：**
+
+1. **显示变更内容** - 完整展示所有修改的文件和内容
+2. **等待明确授权** - 用户必须明确说"提交"、"推送"或"执行"
+3. **逐步确认** - commit 和 push 分开确认，不可批量操作
+4. **提供命令** - 提供 Git 命令让用户手动执行，而非自动执行
+
+**示例对话流程：**
+
+```
+❌ AI: "我已提交并推送了代码"
+✅ AI: "变更已完成。需要我生成 commit 命令吗？"
+✅ 用户: "是的，提交"
+✅ AI: "请执行: git commit -m 'feat: add feature'"
+```
 
 ## 关键原则
 
-- ✅ 频繁提交,小步迭代
-- ✅ Conventional Commits 提交信息
-- ✅ 分支命名规范
-- ✅ 使用 Pull Request
-- ✅ 保持主分支稳定
+- ✅ GitHub Flow（main + feature 分支）
+- ✅ Conventional Commits 格式
+- ✅ 分支命名：`类型/描述`（如 `feature/user-auth`）
+- ✅ PR 审查后合并
+- ✅ 主分支保持稳定
 
-## 关键决策点
+## 分支命名规范
 
-### 1. GitHub Flow 分支策略
+```
+feature/描述  - 新功能
+bugfix/描述   - Bug 修复
+hotfix/描述   - 紧急修复
+docs/描述     - 文档更新
+refactor/描述 - 代码重构
+```
+
+## Conventional Commits
+
+遵循 `type(scope): description` 格式：
 
 ```bash
-# 从 main 创建分支
-git checkout main && git pull
-git checkout -b feature/add-user-profile
-
-# 开发和提交
-git push origin feature/add-user-profile
-# 创建 PR,审查通过后合并
+feat(auth): implement JWT authentication
+fix(ui): correct button alignment
+docs: update README
+refactor(api): simplify user service
+test(utils): add validation tests
+chore(deps): update dependencies
 ```
 
-**分支命名规范：**
-
-```
-类型/范围-描述
-
-✅ feature/user-authentication
-✅ bugfix/login-validation
-✅ hotfix/payment-error
-❌ new-feature, my-branch
-```
-
-### 2. Conventional Commits 规范
+**Breaking Change:**
 
 ```bash
-git commit -m "feat(auth): implement JWT authentication"
-git commit -m "fix(ui): correct button alignment"
-git commit -m "docs: update API documentation"
+feat(api)!: change user endpoint
 
-# Breaking Change
-git commit -m "feat(api): change user endpoint
-
-BREAKING CHANGE: /api/user -> /api/v2/users"
+BREAKING CHANGE: /api/user -> /api/v2/users
 ```
 
-### 3. PR 模板
+## Git 配置
 
-**.github/pull_request_template.md：**
+**.gitignore（必需）：**
 
-```markdown
-## 📝 变更描述
-
-## 🔗 相关 Issue
-Closes #123
-
-## ✅ 检查清单
-- [ ] 代码符合规范
-- [ ] 测试已通过
-- [ ] 文档已更新
-```
-
-### 4. Husky + lint-staged
-
-```json
-{
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged",
-      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-    }
-  },
-  "lint-staged": {
-    "*.{js,ts}": ["eslint --fix", "prettier --write"]
-  }
-}
-```
-
-### 5. commitlint配置
-
-```javascript
-module.exports = {
-  extends: ['@commitlint/config-conventional'],
-  rules: {
-    'type-enum': [2, 'always', ['feat', 'fix', 'docs', 'refactor', 'test', 'chore']],
-  }
-};
-```
-
-## 项目特定配置
-
-**.gitignore：**
-
-```
+```gitignore
 node_modules/
 dist/
-.env
+.env*
+!.env.example
 coverage/
 .DS_Store
+*.log
 ```
-
-## 常见问题
-
-**Q: rebase vs merge？**
-A: Feature 分支 rebase 保持线性,合并主分支用 merge 保留历史。
-
-## 扩展阅读
-
-- [GitHub Flow](https://guides.github.com/introduction/flow/)
-- [Conventional Commits](https://www.conventionalcommits.org/)
