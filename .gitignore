@@ -1,4 +1,7 @@
 
-
 # Turbo AI Rules - Auto-generated files
 .github/copilot-instructions.md
+
+# AI tool config files (keep local only)
+.continuerules
+.cursorrules
