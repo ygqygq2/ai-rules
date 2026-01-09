@@ -1,352 +1,166 @@
 ---
-id: 260
-title: VSCode Extension Development
-description: VSCode 扩展开发规范（基于 TypeScript + 实战项目）
-globs: ["**/extension.ts", "**/src/**/*.ts", "**/package.json"]
+id: 260-vscode-extension
+title: VSCode 扩展开发通用规范
+description: VSCode 扩展开发核心架构决策和关键模式
+globs: ["**/extension.ts", "**/src/**/*.ts"]
 priority: medium
-tags: [vscode, extension, typescript]
-version: 1.0.0
+tags: [vscode, extension, typescript, architecture]
+version: 2.0.0
 author: ygqygq2
-lastUpdated: 2025-12-26
+lastUpdated: 2025-12-27
 ---
 
-# VSCode Extension Development
+# VSCode 扩展开发通用规范
 
 ## 适用场景
 
-- VSCode 扩展项目开发
-- TypeScript 5.9+, Node.js 24.9+, VSCode API 1.105+
-- 使用 pnpm + esbuild + ESLint 9
+VSCode 扩展项目，TypeScript 严格模式开发
 
 ## 核心内容
 
-按功能分模块组织，分层清晰，命令/服务/提供者/工具分离。使用 TypeScript 严格模式，接口优于类，依赖注入优于单例。
+按功能分模块（commands/services/providers/utils），分层清晰，依赖注入优于单例
 
 ## 关键原则
 
-✅ 目录按功能分组（commands/services/providers/utils）  
-✅ TypeScript strict mode 全开  
-✅ 避免 any，必要时用 unknown + 类型守卫  
-✅ 命令注册在 activate，清理在 deactivate  
-✅ 异步操作必须 try-catch + showErrorMessage  
-✅ 配置变更监听 onDidChangeConfiguration
+✅ 功能分层：commands（命令）→ services（业务）→ core（算法）→ utils（工具）  
+✅ TypeScript strict mode，unknown + 类型守卫代替 any  
+✅ activate 注册资源，deactivate 清理，统一 context.subscriptions  
+✅ 异步操作 try-catch，错误必须 showErrorMessage 或日志记录  
+✅ Provider 用 EventEmitter 触发 UI 刷新
 
-## 项目结构
+## 目录结构（建议）
 
 ```
 src/
-├── extension.ts          # 入口（activate/deactivate）
-├── commands/             # 命令实现
-│   └── index.ts         # 统一导出
-├── providers/            # Provider（TreeView/CodeLens/Completion 等）
+├── extension.ts          # activate/deactivate
+├── commands/             # 命令实现（每个命令一个文件）
+├── providers/            # TreeDataProvider/WebviewProvider 等
 ├── services/             # 业务逻辑
-├── config/               # 配置管理
-│   └── settings.ts      # 封装 workspace.getConfiguration
 ├── core/                 # 核心算法/解析器
 ├── utils/                # 工具函数
-│   ├── logger.ts        # 日志封装
-│   └── error-utils.ts   # 错误处理
 ├── types/                # 类型定义
-│   ├── index.ts
-│   └── errors.ts
-└── constants.ts          # 常量（命令 ID/配置键）
+└── constants.ts          # 命令 ID/配置键常量
 ```
 
 ## 关键决策点
 
-### 1. 扩展激活
+### 生命周期管理
 
-**何时:** 入口文件 `extension.ts`  
-**为什么:** 集中管理生命周期，避免分散注册
+**为什么:** 集中注册避免泄漏，清理资源防止内存溢出
 
 ```typescript
-export function activate(context: vscode.ExtensionContext): void {
-  // 初始化日志/配置
-  Logger.init();
-  const config = ConfigManager.getConfig();
-
-  // 注册命令（从 commands/index.ts 导入）
-  context.subscriptions.push(vscode.commands.registerCommand("ext.myCommand", myCommandHandler));
-
-  // 注册 Provider
-  const provider = new MyTreeProvider();
-  context.subscriptions.push(vscode.window.createTreeView("myView", { treeDataProvider: provider }));
-
-  // 监听配置变更
+export function activate(context: vscode.ExtensionContext) {
+  // 所有 Disposable 必须 push 到 context.subscriptions
   context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("myExt")) {
-        // 重新加载配置
-      }
-    })
+    vscode.commands.registerCommand('ext.cmd', handler),
+    vscode.window.createTreeView('view', { treeDataProvider }),
+    vscode.workspace.onDidChangeConfiguration(onConfigChange)
   );
 }
 
-export function deactivate(): void {
-  Logger.dispose();
-  // 清理资源
+export function deactivate() {
+  // 清理全局资源（Logger、Timer、Cache 等）
 }
 ```
 
-### 2. 命令组织
+### 命令组织模式
 
-**何时:** 每个命令一个文件，index.ts 统一导出  
-**为什么:** 职责分离，便于测试和维护
+**为什么:** 每个命令独立文件，职责单一，易测试
 
 ```typescript
-// commands/insert-log.ts
-export async function insertLogCommand(): Promise<void> {
+// commands/sync-rules.ts
+export async function syncRulesCommand() {
   try {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-      throw new Error("No active editor");
-    }
-    // 业务逻辑
+    await service.sync();
   } catch (error) {
-    vscode.window.showErrorMessage(`Failed: ${error.message}`);
+    handleError(error, 'Sync failed');
   }
 }
 
-// commands/index.ts
-export { insertLogCommand } from "./insert-log";
-export { deleteLogCommand } from "./delete-log";
+// commands/index.ts - 统一导出
+export * from './sync-rules';
 ```
 
-### 3. 配置管理
+### Provider 响应式更新
 
-**何时:** 封装 workspace.getConfiguration  
-**为什么:** 类型安全 + 默认值 + 单一职责
+**为什么:** UI 数据变更需主动触发刷新
 
 ```typescript
-// config/settings.ts
-export class ConfigManager {
-  private static readonly SECTION = "myExt";
+class MyTreeProvider implements vscode.TreeDataProvider<Item> {
+  private _onDidChange = new vscode.EventEmitter<Item | undefined>();
+  readonly onDidChangeTreeData = this._onDidChange.event;
 
-  static getConfig() {
-    const config = vscode.workspace.getConfiguration(this.SECTION);
-    return {
-      enableFeature: config.get<boolean>("enableFeature", true),
-      logLevel: config.get<string>("logLevel", "info"),
-      customPath: config.get<string>("customPath", ""),
-    };
+  refresh() { this._onDidChange.fire(undefined); }
+  getTreeItem(el: Item) { return el; }
+  getChildren(el?: Item): Thenable<Item[]> { /*...*/ }
+}
+```
+
+### 配置管理封装
+
+**为什么:** 类型安全 + 默认值集中管理
+
+```typescript
+class ConfigManager {
+  private static SECTION = 'myExt';
+  
+  static get<T>(key: string, defaultValue: T): T {
+    return vscode.workspace.getConfiguration(this.SECTION).get(key, defaultValue);
   }
-
-  static update(key: string, value: unknown, isGlobal = false): Thenable<void> {
-    return vscode.workspace.getConfiguration(this.SECTION).update(key, value, isGlobal);
+  
+  static update(key: string, value: unknown, scope = vscode.ConfigurationTarget.Workspace) {
+    return vscode.workspace.getConfiguration(this.SECTION).update(key, value, scope);
   }
 }
 ```
 
-### 4. 错误处理
+### 类型守卫处理 unknown
 
-**何时:** 所有命令和异步操作  
-**为什么:** 防止扩展崩溃，用户友好的错误提示
+**为什么:** 避免 any，保持类型安全
 
 ```typescript
-// utils/error-utils.ts
-export function handleError(error: unknown, context?: string): void {
-  const message = error instanceof Error ? error.message : String(error);
-  const fullMessage = context ? `${context}: ${message}` : message;
+interface Config { enabled: boolean; path: string; }
 
-  Logger.error(fullMessage, error);
-  vscode.window.showErrorMessage(fullMessage);
+function isConfig(obj: unknown): obj is Config {
+  return typeof obj === 'object' && obj !== null 
+    && 'enabled' in obj && 'path' in obj;
 }
 
 // 使用
-try {
-  await someOperation();
-} catch (error) {
-  handleError(error, "Failed to execute command");
+const data: unknown = getSomeData();
+if (isConfig(data)) {
+  console.log(data.enabled); // 类型安全
 }
-```
-
-### 5. Provider 实现
-
-**何时:** TreeView/CodeLens/Completion 等  
-**为什么:** 响应式 UI 更新
-
-```typescript
-export class MyTreeProvider implements vscode.TreeDataProvider<TreeItem> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<TreeItem | undefined>();
-  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
-
-  refresh(): void {
-    this._onDidChangeTreeData.fire(undefined); // 刷新整棵树
-  }
-
-  getTreeItem(element: TreeItem): vscode.TreeItem {
-    return element;
-  }
-
-  getChildren(element?: TreeItem): Thenable<TreeItem[]> {
-    // 返回子节点
-    return Promise.resolve([]);
-  }
-}
-```
-
-### 6. 类型定义
-
-**何时:** 项目特定的接口和类型  
-**为什么:** 类型安全，避免 any
-
-```typescript
-// types/index.ts
-export interface ExtensionConfig {
-  enableFeature: boolean;
-  logLevel: "debug" | "info" | "warn" | "error";
-  customPath: string;
-}
-
-export interface CommandContext {
-  editor: vscode.TextEditor;
-  document: vscode.TextDocument;
-  selection: vscode.Selection;
-}
-
-// 类型守卫
-export function isCommandContext(obj: unknown): obj is CommandContext {
-  return typeof obj === "object" && obj !== null && "editor" in obj && "document" in obj;
-}
-```
-
-### 7. 日志封装
-
-**何时:** 统一日志输出  
-**为什么:** 调试友好，生产环境可控制
-
-```typescript
-// utils/logger.ts
-export class Logger {
-  private static outputChannel: vscode.OutputChannel;
-
-  static init(name = "My Extension"): void {
-    this.outputChannel = vscode.window.createOutputChannel(name);
-  }
-
-  static info(message: string): void {
-    this.log("INFO", message);
-  }
-
-  static error(message: string, error?: unknown): void {
-    const errorMsg = error instanceof Error ? error.stack : String(error);
-    this.log("ERROR", `${message}\n${errorMsg}`);
-  }
-
-  private static log(level: string, message: string): void {
-    const timestamp = new Date().toISOString();
-    this.outputChannel.appendLine(`[${timestamp}] [${level}] ${message}`);
-  }
-
-  static dispose(): void {
-    this.outputChannel.dispose();
-  }
-}
-```
-
-## 项目特定配置
-
-### package.json 关键字段
-
-```json
-{
-  "activationEvents": ["onLanguage:typescript", "onCommand:myExt.activate"],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "myExt.myCommand",
-        "title": "My Command",
-        "category": "My Extension"
-      }
-    ],
-    "configuration": {
-      "title": "My Extension",
-      "properties": {
-        "myExt.enableFeature": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable feature"
-        }
-      }
-    },
-    "views": {
-      "explorer": [
-        {
-          "id": "myView",
-          "name": "My View"
-        }
-      ]
-    }
-  }
-}
-```
-
-### tsconfig.json
-
-```json
-{
-  "compilerOptions": {
-    "module": "Node16",
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "strict": true,
-    "moduleResolution": "Node16",
-    "sourceMap": true,
-    "rootDir": "src",
-    "outDir": "out"
-  }
-}
-```
-
-### eslint.config.mjs (ESLint 9 Flat Config)
-
-```js
-import tseslint from "typescript-eslint";
-
-export default tseslint.config(...tseslint.configs.recommended, {
-  rules: {
-    "@typescript-eslint/no-explicit-any": "warn",
-    "@typescript-eslint/naming-convention": [
-      "warn",
-      {
-        selector: "variable",
-        format: ["camelCase", "UPPER_CASE"],
-      },
-    ],
-  },
-});
 ```
 
 ## 命名约定
 
-- **文件**: `kebab-case.ts`（如 `log-parser.ts`）
-- **类/接口**: `PascalCase`（如 `LogParser`）
-- **函数/变量**: `camelCase`（如 `parseLog`）
-- **常量**: `UPPER_SNAKE_CASE`（如 `MAX_RETRY`）
-- **私有成员**: `_prefix`（如 `_cache`）
-- **布尔变量**: `is/has/should/can` 前缀
+- 文件: `kebab-case.ts`
+- 类/接口: `PascalCase`
+- 函数/变量: `camelCase`
+- 常量: `UPPER_SNAKE_CASE`
+- 私有成员: `_prefix`
 
-## 测试要求
+## package.json 核心配置
 
-- 单元测试: Vitest（utils/core/services）
-- 集成测试: Mocha + @vscode/test-electron（commands/providers）
-- 测试文件: `*.spec.ts` 或 `*.test.ts`
-- 覆盖率: 核心逻辑 >80%
+```json
+{
+  "activationEvents": ["onStartupFinished"],  // 懒加载优先
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [{ "command": "ext.cmd", "title": "My Cmd" }],
+    "configuration": { "properties": { "ext.key": { "type": "boolean" } } }
+  }
+}
+```
 
-## 常见问题
+## 关键 API 使用场景
 
-**Q: 何时用 singleton vs 依赖注入?**  
-A: 全局共享状态用 singleton（Logger/ConfigManager），业务逻辑用 DI
-
-**Q: 如何处理 VSCode API 的 any 类型?**  
-A: 包装成自定义类型 + 类型守卫，或添加 `/* eslint-disable */` 注释
-
-**Q: 扩展卡顿怎么办?**  
-A: 异步操作用 `vscode.window.withProgress`，大量计算用 Worker 或 debounce
-
-## 扩展阅读
-
-- [VSCode Extension API](https://code.visualstudio.com/api)
-- [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-- [TypeScript Deep Dive](https://basarat.gitbook.io/typescript)
+| API | 场景 | 说明 |
+|-----|------|------|
+| `vscode.window.showQuickPick` | 列表选择 | 支持多选、搜索 |
+| `vscode.window.showInputBox` | 用户输入 | 必须验证输入 |
+| `vscode.window.withProgress` | 长任务 | 显示进度 + 支持取消 |
+| `context.globalState` | 全局状态 | 跨工作区持久化 |
+| `context.workspaceState` | 工作区状态 | 当前工作区持久化 |
+| `context.secrets` | 敏感信息 | Token/密码安全存储 |

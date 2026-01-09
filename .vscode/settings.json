@@ -11,6 +11,13 @@
       }
     }
   ],
+  "turbo-ai-rules.userRules": {
+    "directory": ".project-rules",
+    "markers": {
+      "begin": "<!-- USER-RULES:BEGIN -->",
+      "end": "<!-- USER-RULES:END -->"
+    }
+  },
   "turbo-ai-rules.adapters": {
     "cursor": {
       "enabled": false
