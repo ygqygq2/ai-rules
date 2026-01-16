@@ -18,7 +18,7 @@ lastUpdated: 2026-01-09
 
 ## 核心内容
 
-GitHub Flow 分支策略、Conventional Commits、严格的 AI 操作限制。
+GitHub Flow + Conventional Commits，重点：AI 操作限制和项目特定配置。
 
 ## 🚫 AI 操作限制（最高优先级）
 
@@ -49,11 +49,9 @@ GitHub Flow 分支策略、Conventional Commits、严格的 AI 操作限制。
 
 ## 关键原则
 
-- ✅ GitHub Flow（main + feature 分支）
-- ✅ Conventional Commits 格式
-- ✅ 分支命名：`类型/描述`（如 `feature/user-auth`）
-- ✅ PR 审查后合并
-- ✅ 主分支保持稳定
+- ✅ 分支命名：`类型/描述`
+- ✅ Commit 格式：`type(scope): description`
+- ✅ AI 必须等待授权才能执行 Git 操作
 
 ## 分支命名规范
 
@@ -65,26 +63,11 @@ docs/描述     - 文档更新
 refactor/描述 - 代码重构
 ```
 
-## Conventional Commits
+## Commit 类型
 
-遵循 `type(scope): description` 格式：
+`feat` `fix` `docs` `refactor` `test` `chore`
 
-```bash
-feat(auth): implement JWT authentication
-fix(ui): correct button alignment
-docs: update README
-refactor(api): simplify user service
-test(utils): add validation tests
-chore(deps): update dependencies
-```
-
-**Breaking Change:**
-
-```bash
-feat(api)!: change user endpoint
-
-BREAKING CHANGE: /api/user -> /api/v2/users
-```
+**Breaking Change**: 使用 `!` 或 `BREAKING CHANGE:` footer
 
 ## Git 配置
 
