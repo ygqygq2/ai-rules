@@ -2,7 +2,7 @@
 id: 1310
 title: Git 工作流专家
 description: Git 工作流规范、提交约定、分支管理和协作开发指南
-globs: ["**/*"]
+globs: ['**/*']
 priority: high
 tags: [git, workflow, version-control, collaboration]
 version: 1.0.0
@@ -25,6 +25,7 @@ lastUpdated: 2026-01-22
 ### 1. 提交信息格式
 
 **约定式提交**:
+
 ```
 <类型>(<范围>): <简短描述>
 
@@ -36,6 +37,7 @@ lastUpdated: 2026-01-22
 **类型**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`
 
 **示例**:
+
 ```bash
 feat(auth): 添加 JWT 刷新机制
 fix(api): 修复用户登录超时问题
@@ -46,15 +48,16 @@ docs(readme): 更新部署文档
 
 ### 2. 分支策略
 
-| 分支类型 | 用途 | 命名规则 |
-|---------|------|---------|
-| `main/master` | 生产代码 | 固定分支 |
-| `develop` | 集成分支 | 固定分支 |
-| `feature/*` | 新功能 | `feature/用户认证` |
-| `bugfix/*` | Bug 修复 | `bugfix/登录错误` |
-| `hotfix/*` | 紧急修复 | `hotfix/安全补丁` |
+| 分支类型      | 用途     | 命名规则           |
+| ------------- | -------- | ------------------ |
+| `main/master` | 生产代码 | 固定分支           |
+| `develop`     | 集成分支 | 固定分支           |
+| `feature/*`   | 新功能   | `feature/用户认证` |
+| `bugfix/*`    | Bug 修复 | `bugfix/登录错误`  |
+| `hotfix/*`    | 紧急修复 | `hotfix/安全补丁`  |
 
 **规则**:
+
 - 从 `develop` 创建功能分支
 - 分支生命周期 < 3 天
 - 合并后删除分支
@@ -92,6 +95,7 @@ git branch -d feature/new-feature
 ### 4. 常用命令速查
 
 **撤销操作**:
+
 ```bash
 git reset --soft HEAD~1   # 撤销提交，保留更改
 git reset --hard HEAD~1   # 撤销提交，丢弃更改
@@ -99,17 +103,20 @@ git commit --amend        # 修改最后一次提交
 ```
 
 **临时保存**:
+
 ```bash
 git stash save "WIP: 功能描述"
 git stash pop
 ```
 
 **合并提交**:
+
 ```bash
 git rebase -i HEAD~3  # 交互式合并最近 3 次提交
 ```
 
 **查找问题**:
+
 ```bash
 git log --graph --oneline --all
 git bisect start  # 二分查找引入 bug 的提交
@@ -120,12 +127,14 @@ git bisect start  # 二分查找引入 bug 的提交
 ### 5. 冲突解决
 
 **步骤**:
+
 1. 拉取最新代码: `git pull --rebase origin develop`
 2. 手动解决冲突标记 (`<<<<<<<`, `=======`, `>>>>>>>`)
 3. 测试验证修复
 4. 添加并继续: `git add .` → `git rebase --continue`
 
 **预防**:
+
 - 经常同步上游分支
 - 保持小而频繁的提交
 - 启用 `git rerere` 记住冲突解决方案
@@ -135,6 +144,7 @@ git bisect start  # 二分查找引入 bug 的提交
 ## Code Review 清单
 
 **提交 PR 前**:
+
 - [ ] 代码符合项目规范
 - [ ] 单元测试通过
 - [ ] 提交信息规范
@@ -142,6 +152,7 @@ git bisect start  # 二分查找引入 bug 的提交
 - [ ] 已自我 Review
 
 **Review 关注点**:
+
 - 逻辑正确性
 - 边界条件处理
 - 错误处理
@@ -153,6 +164,7 @@ git bisect start  # 二分查找引入 bug 的提交
 ## 配置建议
 
 **.gitignore**:
+
 ```
 node_modules/
 .env
@@ -161,6 +173,7 @@ node_modules/
 ```
 
 **Git Hooks** (`.githooks/pre-commit`):
+
 ```bash
 #!/bin/sh
 npm run lint
@@ -168,6 +181,7 @@ npm test
 ```
 
 **配置启用**:
+
 ```bash
 git config core.hooksPath .githooks
 ```
