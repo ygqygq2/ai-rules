@@ -27,6 +27,8 @@
 - `1307-refactoring-workflow.mdc` - 安全重构工作流
 - `1308-performance-optimization.mdc` - 性能优化系统化流程
 - `1309-troubleshooting.mdc` - 问题排查与根因分析
+- `1310` (git-workflow-expert/) - Git 工作流专家
+- `1311-security-audit.mdc` - 项目安全审计与漏洞检查
 
 ## 使用场景
 

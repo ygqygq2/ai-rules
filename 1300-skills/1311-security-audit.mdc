@@ -1,0 +1,365 @@
+---
+id: 1311
+title: 项目安全审计技能
+description: 依赖漏洞检查、安全扫描、合规审计工作流
+globs: ["**/package.json", "**/requirements.txt", "**/go.mod", "**/Cargo.toml"]
+priority: high
+tags: [security, audit, vulnerability, compliance, dependencies]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2026-01-23
+---
+
+# 项目安全审计技能
+
+## 何时使用
+
+- 📦 项目上线前安全检查
+- 🔄 定期依赖更新审计
+- 🚨 发现 CVE 漏洞后排查
+- ✅ 安全合规评估
+- 🔐 代码库敏感信息扫描
+
+## 核心工作流
+
+### 1. 依赖漏洞扫描
+
+#### Node.js/npm
+
+```bash
+# 内置审计工具
+npm audit
+npm audit --json > audit-report.json
+npm audit fix  # 自动修复
+
+# 更详细的报告
+npx audit-ci --moderate  # CI 中使用，发现中危及以上漏洞会失败
+
+# 检查过期依赖
+npx npm-check-updates
+npx depcheck  # 检查未使用的依赖
+```
+
+#### Python
+
+```bash
+# 使用 pip-audit（推荐）
+pip install pip-audit
+pip-audit
+
+# 或使用 safety
+pip install safety
+safety check
+safety check --json > safety-report.json
+
+# 检查依赖树
+pipdeptree --warn
+```
+
+#### Go
+
+```bash
+# 漏洞检查
+go install golang.org/x/vuln/cmd/govulncheck@latest
+govulncheck ./...
+
+# 依赖审计
+go list -m all
+go mod graph | grep <package>
+```
+
+#### Rust
+
+```bash
+# cargo-audit
+cargo install cargo-audit
+cargo audit
+
+# 生成报告
+cargo audit --json > audit-report.json
+```
+
+---
+
+### 2. 代码安全扫描
+
+#### 通用工具
+
+```bash
+# Trivy（多语言、容器镜像扫描）
+trivy fs . --severity HIGH,CRITICAL
+trivy image myapp:latest
+trivy config .  # IaC 扫描
+
+# Snyk（需注册）
+snyk test
+snyk monitor  # 持续监控
+snyk code test  # 静态代码分析
+```
+
+#### 敏感信息检测
+
+```bash
+# git-secrets
+git secrets --scan
+git secrets --scan-history
+
+# TruffleHog
+trufflehog git file://. --only-verified
+trufflehog github --org=yourorg
+
+# gitleaks（推荐）
+gitleaks detect --source . --verbose
+gitleaks protect --staged  # pre-commit hook
+```
+
+#### 静态分析
+
+```bash
+# Semgrep（支持多语言）
+semgrep --config=auto .
+semgrep --config=p/security-audit .
+
+# CodeQL（GitHub 推荐）
+codeql database create mydb --language=javascript
+codeql database analyze mydb --format=sarif-latest
+```
+
+---
+
+### 3. 容器镜像扫描
+
+```bash
+# Docker Scout
+docker scout cves myapp:latest
+docker scout recommendations myapp:latest
+
+# Grype
+grype myapp:latest --scope all-layers
+
+# 检查基础镜像
+docker history myapp:latest
+dive myapp:latest  # 分析镜像层
+```
+
+---
+
+### 4. License 合规检查
+
+```bash
+# Node.js
+npx license-checker --summary
+npx license-checker --json > licenses.json
+npx legally  # 生成法律声明
+
+# Python
+pip-licenses
+pip-licenses --format=markdown > LICENSES.md
+
+# Go
+go-licenses csv ./...
+go-licenses save ./... --save_path=./licenses
+```
+
+---
+
+## 完整审计流程
+
+### 每日/每周检查
+
+```bash
+#!/bin/bash
+# security-check.sh
+
+echo "🔍 1. 依赖漏洞扫描..."
+npm audit --audit-level=high || true
+
+echo "🔒 2. 代码敏感信息检测..."
+gitleaks detect --no-git || true
+
+echo "📦 3. 过期依赖检查..."
+npx npm-check-updates --target minor
+
+echo "✅ 完成！"
+```
+
+### 上线前审计
+
+```bash
+# 1. 全面漏洞扫描
+trivy fs . --severity HIGH,CRITICAL --exit-code 1
+
+# 2. 代码质量与安全
+semgrep --config=auto . --error
+
+# 3. License 合规
+npx license-checker --failOn 'GPL;AGPL'
+
+# 4. 镜像扫描（如有）
+docker scout cves myapp:latest --exit-code
+```
+
+### CI/CD 集成
+
+```yaml
+# .github/workflows/security.yml
+name: Security Audit
+
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Dependency Audit
+        run: npm audit --audit-level=moderate
+
+      - name: Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          severity: "CRITICAL,HIGH"
+```
+
+---
+
+## 漏洞处理决策
+
+### 风险评级
+
+| 等级     | 描述       | 处理时限 | 行动                         |
+| -------- | ---------- | -------- | ---------------------------- |
+| CRITICAL | 可直接利用 | 24h      | 立即修复或回滚               |
+| HIGH     | 间接可利用 | 7天      | 计划修复，临时缓解           |
+| MEDIUM   | 需特定条件 | 30天     | 评估影响，下个迭代修复       |
+| LOW      | 理论风险   | 90天     | 记录追踪，版本更新时一并处理 |
+
+### 决策流程
+
+```
+发现漏洞
+  ↓
+1. 影响评估
+   - 项目是否使用受影响功能？
+   - 是否有公开 Exploit？
+   - 攻击面是否可达？
+  ↓
+2. 修复选项
+   ✅ 升级到修复版本（优先）
+   ✅ 应用补丁
+   ✅ 替换依赖
+   ⚠️ 临时禁用功能
+   ⚠️ WAF/防火墙缓解
+  ↓
+3. 验证测试
+   - 回归测试通过
+   - 重新扫描确认修复
+   - 功能验证正常
+  ↓
+4. 文档记录
+   - 更新 CHANGELOG
+   - 记录修复措施
+   - 通知相关团队
+```
+
+---
+
+## 常用检查清单
+
+### 上线前必查
+
+- [ ] `npm audit` / `pip-audit` 无 HIGH/CRITICAL
+- [ ] 无硬编码密钥/Token
+- [ ] License 合规（无 GPL/AGPL）
+- [ ] 所有依赖来自可信源
+- [ ] 容器镜像漏洞扫描通过
+- [ ] 环境变量配置检查
+- [ ] 敏感数据加密存储
+
+### 定期审计（每月）
+
+- [ ] 更新所有依赖到最新稳定版
+- [ ] 运行全量 Semgrep 规则
+- [ ] 检查 git history 中的泄露
+- [ ] 审查 IAM 权限配置
+- [ ] 日志审计（异常访问）
+- [ ] 第三方服务 API Key 轮换
+
+---
+
+## 工具对比
+
+| 工具      | 语言支持 | 漏洞库          | 免费版 | 特点                |
+| --------- | -------- | --------------- | ------ | ------------------- |
+| npm audit | Node.js  | GitHub Advisory | ✅     | 内置，快速          |
+| Trivy     | 多语言   | NVD, Alpine     | ✅     | 容器+代码，离线可用 |
+| Snyk      | 多语言   | 自有+NVD        | ⚠️部分 | 智能修复建议        |
+| Semgrep   | 30+语言  | 自定义规则      | ✅     | 强大的静态分析      |
+| gitleaks  | 任意     | N/A             | ✅     | 最佳敏感信息检测    |
+| CodeQL    | 多语言   | GitHub          | ✅开源 | GitHub 深度集成     |
+
+---
+
+## 最佳实践
+
+✅ **自动化**:
+
+- pre-commit hook 防止敏感信息提交
+- CI/CD 必须包含安全扫描
+- 依赖更新自动化（Dependabot/Renovate）
+
+✅ **持续监控**:
+
+- 使用 Snyk/Dependabot 监控新漏洞
+- 订阅安全邮件列表
+- 定期审计第三方服务
+
+✅ **纵深防御**:
+
+- 最小权限原则
+- 网络隔离
+- 输入验证
+- 日志与监控
+
+❌ **避免**:
+
+- 忽略 LOW/MEDIUM 级别漏洞
+- 使用过时的工具（如只用 npm audit）
+- 跳过容器镜像扫描
+- 不测试直接应用安全补丁
+
+---
+
+## 应急响应
+
+当发现严重漏洞时：
+
+```bash
+# 1. 快速评估
+echo "漏洞ID: CVE-2024-XXXX"
+echo "受影响版本: package@1.0.0"
+grep -r "package" package.json
+
+# 2. 临时缓解
+# - 回滚到安全版本
+# - 禁用受影响功能
+# - 部署 WAF 规则
+
+# 3. 正式修复
+npm install package@safe-version
+npm audit  # 验证修复
+
+# 4. 验证部署
+curl https://api.example.com/health
+grep "CVE-2024-XXXX" audit-report.json && echo "仍存在！"
+```
+
+完成后更新文档并通知团队。
