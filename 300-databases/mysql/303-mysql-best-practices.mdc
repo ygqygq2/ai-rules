@@ -1,0 +1,252 @@
+---
+id: 303
+title: MySQL 最佳实践
+description: MySQL 数据库设计、查询优化和日常开发的最佳实践
+globs:
+  [
+    '**/*.sql',
+    'migrations/**/*',
+    '**/*migration*.sql',
+    '**/*mysql*.{js,ts,py,go}',
+  ]
+priority: medium
+tags: [mysql, database, sql, best-practices, innodb]
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2026-01-23
+---
+
+# MySQL 最佳实践
+
+## 适用场景
+
+- MySQL 8.0+ 数据库开发
+- 数据库迁移和表设计
+- InnoDB 存储引擎优化
+- 主从复制和高可用架构
+
+## 关键原则
+
+- ✅ 使用 InnoDB 存储引擎（事务支持、行级锁）
+- ✅ 主键设计：自增 ID 或 UUID（MySQL 8.0+ 推荐 UUID_TO_BIN）
+- ✅ 字符集：utf8mb4（完整 Unicode 支持，包含 emoji）
+- ✅ 索引策略：单列索引、复合索引、覆盖索引
+- ✅ 查询优化：避免 SELECT \*、使用 LIMIT、JOIN 优化
+- ✅ 事务处理：ACID 保证、隔离级别选择
+
+## 表设计关键点
+
+```sql
+CREATE TABLE users (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    username VARCHAR(50) NOT NULL,
+    password_hash CHAR(60) NOT NULL,  -- bcrypt hash 固定长度
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- 唯一约束
+    UNIQUE KEY uk_email (email),
+    UNIQUE KEY uk_username (username),
+
+    -- 索引
+    KEY idx_created_at (created_at),
+    KEY idx_is_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**项目特定规范：**
+
+- 使用 `BIGINT UNSIGNED` 作为主键（避免 ID 溢出）
+- 时间戳使用 `TIMESTAMP` 而非 `DATETIME`（自动时区转换）
+- 布尔值使用 `BOOLEAN`（实际为 TINYINT(1)）
+- 表名和字段名使用小写 + 下划线命名
+
+## 索引策略
+
+```sql
+-- ✅ 单列索引（高选择性字段）
+CREATE INDEX idx_users_email ON users(email);
+
+-- ✅ 复合索引（遵循最左前缀原则）
+CREATE INDEX idx_user_posts ON posts(user_id, created_at DESC);
+
+-- ✅ 覆盖索引（查询的所有字段都在索引中）
+CREATE INDEX idx_posts_cover ON posts(user_id, status, title, created_at);
+
+-- ✅ 前缀索引（长字符串字段）
+CREATE INDEX idx_posts_content ON posts(content(100));
+
+-- ❌ 避免在低选择性字段建索引
+-- 不要在 gender(只有2-3个值)、status 等字段建独立索引
+```
+
+## 查询优化
+
+```sql
+-- ❌ 避免 SELECT *
+SELECT * FROM users WHERE email = 'user@example.com';
+
+-- ✅ 只查询需要的字段
+SELECT id, email, username FROM users WHERE email = 'user@example.com';
+
+-- ✅ 使用 JOIN 避免 N+1 查询
+SELECT p.id, p.title, u.username
+FROM posts p
+INNER JOIN users u ON p.user_id = u.id
+WHERE p.status = 'published'
+LIMIT 20;
+
+-- ✅ 使用子查询优化 IN 条件（数据量大时）
+SELECT * FROM posts
+WHERE user_id IN (SELECT id FROM users WHERE is_active = TRUE);
+
+-- ✅ 使用 EXPLAIN 分析查询
+EXPLAIN SELECT * FROM posts WHERE user_id = 1;
+```
+
+**避免索引失效：**
+
+```sql
+-- ❌ 在索引字段上使用函数
+SELECT * FROM users WHERE LOWER(email) = 'user@example.com';
+
+-- ✅ 正确做法
+SELECT * FROM users WHERE email = 'user@example.com';
+
+-- ❌ 使用 OR 条件
+SELECT * FROM users WHERE email = 'a@b.com' OR username = 'abc';
+
+-- ✅ 使用 UNION
+SELECT * FROM users WHERE email = 'a@b.com'
+UNION
+SELECT * FROM users WHERE username = 'abc';
+```
+
+## 事务处理
+
+```sql
+START TRANSACTION;
+
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+
+INSERT INTO transactions (from_account, to_account, amount, created_at)
+VALUES (1, 2, 100, NOW());
+
+COMMIT;
+
+-- 错误处理（应用层）
+-- 发生错误时执行 ROLLBACK;
+```
+
+**隔离级别选择：**
+
+- `READ COMMITTED`：大多数场景（默认推荐）
+- `REPEATABLE READ`：MySQL 默认级别，防止不可重复读
+- `SERIALIZABLE`：严格场景（性能较低）
+
+## 数据类型选择
+
+```sql
+CREATE TABLE products (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,  -- 金额使用 DECIMAL
+    stock INT UNSIGNED NOT NULL DEFAULT 0,
+    description TEXT,
+    metadata JSON,  -- MySQL 8.0+ 原生 JSON 支持
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_available BOOLEAN NOT NULL DEFAULT TRUE,
+
+    KEY idx_price (price),
+    KEY idx_is_available (is_available)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- JSON 字段查询（MySQL 8.0+）
+SELECT * FROM products WHERE JSON_EXTRACT(metadata, '$.category') = 'electronics';
+SELECT * FROM products WHERE metadata->>'$.category' = 'electronics';
+```
+
+**类型选择原则：**
+
+- 整数：`TINYINT`(1字节) < `SMALLINT`(2) < `INT`(4) < `BIGINT`(8)
+- 字符串：定长用 `CHAR`，变长用 `VARCHAR`，长文本用 `TEXT`
+- 金额：必须用 `DECIMAL`，不用 `FLOAT/DOUBLE`（精度问题）
+- 时间：`TIMESTAMP`（1970-2038）或 `DATETIME`（更大范围）
+
+## 外键约束
+
+```sql
+-- 外键约束（确保数据完整性）
+CREATE TABLE posts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**项目决策：**
+
+- 小项目/单体应用：使用外键约束
+- 大项目/微服务：由应用层保证一致性（性能考虑）
+
+## 批量操作
+
+```sql
+-- ✅ 批量插入（一次插入多行）
+INSERT INTO users (email, username, created_at) VALUES
+    ('user1@example.com', 'user1', NOW()),
+    ('user2@example.com', 'user2', NOW()),
+    ('user3@example.com', 'user3', NOW());
+
+-- ✅ 批量更新（使用 CASE WHEN）
+UPDATE users SET
+    status = CASE
+        WHEN id = 1 THEN 'active'
+        WHEN id = 2 THEN 'inactive'
+        ELSE status
+    END
+WHERE id IN (1, 2);
+```
+
+## 字符集和排序规则
+
+```sql
+-- 数据库级别
+CREATE DATABASE mydb
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+-- 表级别
+CREATE TABLE users (
+    ...
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**重要提示：**
+
+- 使用 `utf8mb4` 而非 `utf8`（utf8 只支持 3 字节 Unicode）
+- 排序规则推荐 `utf8mb4_unicode_ci`（不区分大小写）
+
+## 备份和恢复
+
+```bash
+# 备份单个数据库
+mysqldump -u root -p --single-transaction mydb > mydb_backup.sql
+
+# 备份所有数据库
+mysqldump -u root -p --all-databases > all_databases_backup.sql
+
+# 恢复数据库
+mysql -u root -p mydb < mydb_backup.sql
+```
+
+## 扩展阅读
+
+- [MySQL 8.0 官方文档](https://dev.mysql.com/doc/refman/8.0/en/)
+- [高性能 MySQL（第4版）](https://www.oreilly.com/library/view/high-performance-mysql/9781492080503/)
