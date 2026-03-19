@@ -1,0 +1,24 @@
+#!/bin/sh
+# Git pre-commit hook - 提交前自动检查
+
+echo "🔍 Running pre-commit checks..."
+
+# 1. 运行代码格式化检查
+echo "  ├─ Checking code format..."
+npm run lint --quiet || {
+  echo "  ❌ Lint failed! Please fix errors before committing."
+  exit 1
+}
+
+# 2. 运行单元测试
+echo "  ├─ Running tests..."
+npm test --silent || {
+  echo "  ❌ Tests failed! Please fix failing tests."
+  exit 1
+}
+
+# 3. 检查提交信息格式（如果使用 commitlint）
+# npx commitlint --edit "$1"
+
+echo "  ✅ All checks passed!"
+exit 0

@@ -1,0 +1,585 @@
+---
+id: 106-lua-game
+title: Lua 游戏开发最佳实践
+description: Lua 游戏开发核心架构，重点解决数据表管理、ID 关联、模块通信等关键问题
+globs:
+  - "**/*.lua"
+priority: medium
+tags:
+  - lua
+  - game-development
+  - data-management
+  - architecture
+version: 1.0.0
+author: Turbo AI Rules
+lastUpdated: 2026-02-10
+---
+
+# Lua 游戏开发最佳实践
+
+## 适用场景
+
+- 使用 Lua 作为主要或脚本语言的游戏项目（Unity/Cocos/Love2D 等）
+- 需要管理大量配置数据、实体 ID、关联关系的游戏
+- 多系统协作的中大型游戏架构
+
+## 核心内容
+
+游戏开发的关键在于**数据驱动设计**和**系统解耦**。Lua 的表（table）是实现这两点的核心工具。基础 Lua 语法、元表、协程等约定俗成知识不赘述，本规则聚焦游戏特定架构。
+
+## 关键原则
+
+✅ **数据与逻辑分离** - 配置表独立于代码  
+✅ **ID 全局唯一** - 使用统一的 ID 生成和索引系统  
+✅ **弱引用关联** - ID 引用代替直接对象引用，避免循环依赖  
+✅ **事件驱动通信** - 系统间通过事件总线解耦  
+✅ **模块化加载** - 按需加载，明确依赖关系
+
+---
+
+## 1. 数据表管理架构
+
+### 1.1 配置表标准结构
+
+```lua
+-- data/config/item_config.lua
+return {
+    -- 使用数字ID作为主键，便于快速索引
+    [1001] = {
+        id = 1001,
+        name = "铁剑",
+        type = "weapon",
+        attack = 50,
+        -- 关联其他表的ID（弱引用）
+        required_level = 5,
+        craft_material_ids = {2001, 2002}, -- 素材ID列表
+        skill_id = 3001, -- 技能ID
+    },
+    [1002] = {
+        id = 1002,
+        name = "生命药水",
+        type = "potion",
+        heal = 100,
+    },
+}
+```
+
+### 1.2 配置表管理器（单例模式）
+
+```lua
+-- core/ConfigManager.lua
+local ConfigManager = {}
+local configs = {} -- 存储所有配置表
+
+-- 加载配置表
+function ConfigManager:load(config_name)
+    if configs[config_name] then return end
+
+    local path = "data/config/" .. config_name
+    local success, config = pcall(require, path)
+
+    if success then
+        configs[config_name] = config
+        print("[ConfigManager] Loaded:", config_name)
+    else
+        error("[ConfigManager] Failed to load: " .. config_name)
+    end
+end
+
+-- 通过ID获取配置（核心方法）
+function ConfigManager:get(config_name, id)
+    local config = configs[config_name]
+    if not config then
+        self:load(config_name)
+        config = configs[config_name]
+    end
+    return config and config[id]
+end
+
+-- 批量获取
+function ConfigManager:getBatch(config_name, ids)
+    local results = {}
+    for _, id in ipairs(ids) do
+        table.insert(results, self:get(config_name, id))
+    end
+    return results
+end
+
+-- 条件查询（缓存优化）
+function ConfigManager:query(config_name, predicate)
+    local config = configs[config_name] or {}
+    local results = {}
+    for id, data in pairs(config) do
+        if predicate(data) then
+            table.insert(results, data)
+        end
+    end
+    return results
+end
+
+return ConfigManager
+```
+
+**使用示例：**
+
+```lua
+local ConfigManager = require("core.ConfigManager")
+
+-- 获取单个配置
+local item = ConfigManager:get("item_config", 1001)
+print(item.name) -- "铁剑"
+
+-- 通过ID关联获取其他配置
+local materials = ConfigManager:getBatch("material_config", item.craft_material_ids)
+local skill = ConfigManager:get("skill_config", item.skill_id)
+
+-- 条件查询
+local weapons = ConfigManager:query("item_config", function(item)
+    return item.type == "weapon" and item.attack > 40
+end)
+```
+
+---
+
+## 2. 运行时实体管理（ID 系统）
+
+### 2.1 实体注册表（EntityRegistry）
+
+```lua
+-- core/EntityRegistry.lua
+local EntityRegistry = {
+    entities = {},        -- 所有实体 [id] = entity
+    next_id = 1,          -- 自增ID生成器
+    entities_by_type = {} -- 类型索引 [type] = {id1, id2, ...}
+}
+
+-- 生成唯一ID
+function EntityRegistry:generateID()
+    local id = self.next_id
+    self.next_id = self.next_id + 1
+    return id
+end
+
+-- 注册实体
+function EntityRegistry:register(entity_type, entity_data)
+    local id = self:generateID()
+
+    local entity = {
+        id = id,
+        type = entity_type,
+        data = entity_data or {},
+        created_at = os.time(),
+    }
+
+    self.entities[id] = entity
+
+    -- 类型索引
+    self.entities_by_type[entity_type] = self.entities_by_type[entity_type] or {}
+    table.insert(self.entities_by_type[entity_type], id)
+
+    return id
+end
+
+-- 通过ID获取实体（核心）
+function EntityRegistry:get(id)
+    return self.entities[id]
+end
+
+-- 通过类型获取所有实体ID
+function EntityRegistry:getByType(entity_type)
+    return self.entities_by_type[entity_type] or {}
+end
+
+-- 删除实体
+function EntityRegistry:remove(id)
+    local entity = self.entities[id]
+    if not entity then return end
+
+    -- 从类型索引中移除
+    local type_list = self.entities_by_type[entity.type]
+    if type_list then
+        for i, eid in ipairs(type_list) do
+            if eid == id then
+                table.remove(type_list, i)
+                break
+            end
+        end
+    end
+
+    self.entities[id] = nil
+end
+
+return EntityRegistry
+```
+
+### 2.2 实体与配置关联
+
+```lua
+-- entities/Player.lua
+local EntityRegistry = require("core.EntityRegistry")
+local ConfigManager = require("core.ConfigManager")
+
+local Player = {}
+
+function Player.new(player_config_id)
+    -- 从配置表获取静态数据
+    local config = ConfigManager:get("player_config", player_config_id)
+
+    -- 创建运行时实体
+    local id = EntityRegistry:register("player", {
+        config_id = player_config_id, -- 关联配置ID
+        level = 1,
+        exp = 0,
+        inventory = {},               -- 背包物品ID列表
+        equipped_weapon_id = nil,     -- 装备的武器ID（弱引用）
+    })
+
+    return id -- 返回实体ID，而非实体对象
+end
+
+-- 通过实体ID操作实体
+function Player.addItem(player_id, item_config_id)
+    local player = EntityRegistry:get(player_id)
+    if not player then return false end
+
+    table.insert(player.data.inventory, item_config_id)
+
+    -- 触发事件通知其他系统
+    EventBus:emit("player.item_added", {
+        player_id = player_id,
+        item_id = item_config_id
+    })
+
+    return true
+end
+
+-- 获取玩家装备的武器信息（跨表关联）
+function Player.getWeaponInfo(player_id)
+    local player = EntityRegistry:get(player_id)
+    if not player or not player.data.equipped_weapon_id then
+        return nil
+    end
+
+    -- 通过ID获取配置
+    local weapon_config = ConfigManager:get("item_config", player.data.equipped_weapon_id)
+
+    -- 再通过武器的技能ID获取技能
+    if weapon_config and weapon_config.skill_id then
+        weapon_config.skill = ConfigManager:get("skill_config", weapon_config.skill_id)
+    end
+
+    return weapon_config
+end
+
+return Player
+```
+
+---
+
+## 3. 事件驱动系统解耦
+
+### 3.1 事件总线（EventBus）
+
+```lua
+-- core/EventBus.lua
+local EventBus = {
+    listeners = {} -- [event_name] = {listener1, listener2, ...}
+}
+
+-- 注册监听
+function EventBus:on(event_name, callback)
+    self.listeners[event_name] = self.listeners[event_name] or {}
+    table.insert(self.listeners[event_name], callback)
+end
+
+-- 触发事件（关键：系统间通过事件传递ID，而非对象）
+function EventBus:emit(event_name, event_data)
+    local listeners = self.listeners[event_name]
+    if not listeners then return end
+
+    for _, callback in ipairs(listeners) do
+        callback(event_data)
+    end
+end
+
+-- 取消监听
+function EventBus:off(event_name, callback)
+    local listeners = self.listeners[event_name]
+    if not listeners then return end
+
+    for i, cb in ipairs(listeners) do
+        if cb == callback then
+            table.remove(listeners, i)
+            return
+        end
+    end
+end
+
+return EventBus
+```
+
+### 3.2 系统间通过 ID 通信
+
+```lua
+-- systems/QuestSystem.lua
+local EventBus = require("core.EventBus")
+local EntityRegistry = require("core.EntityRegistry")
+
+local QuestSystem = {}
+
+function QuestSystem:init()
+    -- 监听玩家击杀怪物事件
+    EventBus:on("monster.killed", function(data)
+        -- data = { player_id = 123, monster_config_id = 5001 }
+        self:onMonsterKilled(data.player_id, data.monster_config_id)
+    end)
+end
+
+function QuestSystem:onMonsterKilled(player_id, monster_config_id)
+    -- 通过player_id获取玩家的任务数据
+    local player = EntityRegistry:get(player_id)
+    if not player then return end
+
+    -- 更新任务进度
+    -- ...
+
+    -- 任务完成后触发事件
+    EventBus:emit("quest.completed", {
+        player_id = player_id,
+        quest_id = 7001
+    })
+end
+
+return QuestSystem
+```
+
+---
+
+## 4. 模块化架构范式
+
+### 4.1 目录结构
+
+```
+game/
+├── core/               # 核心框架
+│   ├── ConfigManager.lua
+│   ├── EntityRegistry.lua
+│   ├── EventBus.lua
+│   └── GameLoop.lua
+├── data/
+│   └── config/         # 配置表（数据层）
+│       ├── item_config.lua
+│       ├── skill_config.lua
+│       └── monster_config.lua
+├── entities/           # 实体工厂
+│   ├── Player.lua
+│   ├── Monster.lua
+│   └── Item.lua
+├── systems/            # 游戏系统（逻辑层）
+│   ├── CombatSystem.lua
+│   ├── QuestSystem.lua
+│   └── InventorySystem.lua
+└── main.lua
+```
+
+### 4.2 初始化流程
+
+```lua
+-- main.lua
+local ConfigManager = require("core.ConfigManager")
+local EventBus = require("core.EventBus")
+local CombatSystem = require("systems.CombatSystem")
+local QuestSystem = require("systems.QuestSystem")
+
+-- 1. 预加载核心配置
+ConfigManager:load("item_config")
+ConfigManager:load("skill_config")
+
+-- 2. 初始化系统
+CombatSystem:init()
+QuestSystem:init()
+
+-- 3. 创建玩家
+local Player = require("entities.Player")
+local player_id = Player.new(1) -- 配置ID 1 的玩家
+
+-- 4. 游戏循环中只传递ID
+function update(dt)
+    CombatSystem:update(dt, player_id)
+end
+```
+
+---
+
+## 5. 性能优化关键点
+
+### 5.1 配置表缓存
+
+```lua
+-- 为频繁查询的配置添加二级索引
+local ConfigManager = {}
+ConfigManager.indexes = {} -- [config_name][field_name][value] = id
+
+function ConfigManager:buildIndex(config_name, field_name)
+    local config = configs[config_name]
+    if not config then return end
+
+    self.indexes[config_name] = self.indexes[config_name] or {}
+    self.indexes[config_name][field_name] = {}
+
+    for id, data in pairs(config) do
+        local value = data[field_name]
+        self.indexes[config_name][field_name][value] = id
+    end
+end
+
+-- 通过索引快速查找
+function ConfigManager:findByField(config_name, field_name, value)
+    local index = self.indexes[config_name] and self.indexes[config_name][field_name]
+    if index then
+        local id = index[value]
+        return id and self:get(config_name, id)
+    end
+
+    -- 降级为遍历查询
+    return self:query(config_name, function(data)
+        return data[field_name] == value
+    end)[1]
+end
+```
+
+### 5.2 对象池模式
+
+```lua
+-- 对于频繁创建销毁的对象（如子弹、特效）
+local ObjectPool = {
+    pools = {}
+}
+
+function ObjectPool:get(pool_name, factory)
+    self.pools[pool_name] = self.pools[pool_name] or {}
+    local pool = self.pools[pool_name]
+
+    if #pool > 0 then
+        return table.remove(pool)
+    else
+        return factory() -- 工厂函数创建新对象
+    end
+end
+
+function ObjectPool:release(pool_name, obj)
+    obj:reset() -- 重置状态
+    table.insert(self.pools[pool_name], obj)
+end
+```
+
+---
+
+## 6. 常见陷阱
+
+❌ **直接存储对象引用** - 导致循环依赖和难以序列化  
+✅ **存储ID，使用时查询** - 保持数据清晰，易于保存/加载
+
+❌ **全局变量传递数据** - 难以追踪数据流  
+✅ **事件总线 + ID 传递** - 解耦且可追溯
+
+❌ **配置表包含逻辑代码** - 混淆数据与行为  
+✅ **配置表只有数据，逻辑在系统中** - 职责分离
+
+---
+
+## 7. 示例：完整的伤害计算流程
+
+```lua
+-- 1. 玩家攻击怪物
+local CombatSystem = require("systems.CombatSystem")
+CombatSystem:attack(player_id, monster_id)
+
+-- 2. CombatSystem 内部实现
+function CombatSystem:attack(attacker_id, target_id)
+    local attacker = EntityRegistry:get(attacker_id)
+    local target = EntityRegistry:get(target_id)
+
+    -- 通过配置ID获取武器配置
+    local weapon = ConfigManager:get("item_config", attacker.data.equipped_weapon_id)
+
+    -- 计算伤害
+    local damage = weapon.attack
+
+    -- 通过ID调用技能系统
+    if weapon.skill_id then
+        local skill = ConfigManager:get("skill_config", weapon.skill_id)
+        damage = damage * skill.damage_multiplier
+    end
+
+    -- 应用伤害
+    target.data.hp = target.data.hp - damage
+
+    -- 触发事件（传递ID）
+    EventBus:emit("combat.damage_dealt", {
+        attacker_id = attacker_id,
+        target_id = target_id,
+        damage = damage
+    })
+
+    -- 检查死亡
+    if target.data.hp <= 0 then
+        EventBus:emit("monster.killed", {
+            player_id = attacker_id,
+            monster_config_id = target.data.config_id
+        })
+        EntityRegistry:remove(target_id)
+    end
+end
+```
+
+---
+
+## 8. 工具推荐
+
+- **Luacheck**: 静态分析工具（安装：`luarocks install luacheck`）
+- **Lua Language Server**: VSCode 扩展，提供智能提示
+- **Busted**: 单元测试框架
+- **配置表工具**: Excel/CSV → Lua 表转换脚本
+
+---
+
+## 9. 进阶模式
+
+### ECS（实体组件系统）
+
+```lua
+-- 当实体类型激增时，考虑 ECS
+local Entity = {
+    id = 1,
+    components = {
+        transform = { x = 0, y = 0 },
+        health = { current = 100, max = 100 },
+        inventory = { items = {1001, 1002} } -- 仍然存储ID
+    }
+}
+```
+
+### 热更新
+
+```lua
+-- 配置表热更新
+function ConfigManager:reload(config_name)
+    package.loaded["data.config." .. config_name] = nil
+    self:load(config_name)
+    EventBus:emit("config.reloaded", { config_name = config_name })
+end
+```
+
+---
+
+## 总结
+
+Lua 游戏开发的核心是**ID 驱动的数据关联**：
+
+1. 配置表使用 ID 作为主键
+2. 运行时实体存储 ID 而非对象引用
+3. 系统间通过事件传递 ID
+4. 使用时通过 ConfigManager/EntityRegistry 查询
+
+这种架构实现了**数据与逻辑分离**、**系统解耦**、**易于持久化**的游戏架构。
