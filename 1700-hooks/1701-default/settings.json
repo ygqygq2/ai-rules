@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/validate-bash.sh"
+            "command": "bash 1700-hooks/1702-scripts/validate-bash.sh"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/lint-on-save.sh"
+            "command": "bash 1700-hooks/1702-scripts/lint-on-save.sh"
           }
         ]
       }
