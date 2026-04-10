@@ -1,0 +1,10 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "\\.sh$",
+        "cmd": "bash ${workspaceFolder}/.ai/hooks/validate-bash.sh ${file}"
+      }
+    ]
+  }
+}

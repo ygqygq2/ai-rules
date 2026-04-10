@@ -1,0 +1,10 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "\\.(ts|tsx|js|jsx)$",
+        "cmd": "bash ${workspaceFolder}/.ai/hooks/lint-on-save.sh ${file}"
+      }
+    ]
+  }
+}
