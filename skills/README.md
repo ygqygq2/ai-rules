@@ -4,7 +4,7 @@
 
 ## Skills vs AI Rules
 
-|            | Skills (1300)            | AI Rules (100-900)  |
+|            | Skills (`skills/0001+`)  | AI Rules (`rules/`) |
 | ---------- | ------------------------ | ------------------- |
 | **关注点** | 工作流程、决策方法       | 技术栈、编码规范    |
 | **内容**   | 检查清单、决策树、流程图 | 语法、API、最佳实践 |
@@ -15,21 +15,27 @@
 
 ### 开发技能（语言特定知识库）
 
-- `1301-python-development.mdc` - Python 开发技巧
-- `1302-typescript-development.mdc` - TypeScript 开发技巧
-- `1303-debugging.mdc` - 调试技巧
-- `1304-code-review.mdc` - 代码审查技能
+- `0001-python-development.mdc` - Python 开发技巧
+- `0002-typescript-development.mdc` - TypeScript 开发技巧
+- `0003-debugging.mdc` - 调试技巧
+- `0004-code-review.mdc` - 代码审查技能
 
 ### 工作流技能（跨语言方法论）
 
-- `1305-task-planning.mdc` - 任务规划与分解流程
-- `1306-code-review-workflow.mdc` - 代码审查工作流
-- `1307-refactoring-workflow.mdc` - 安全重构工作流
-- `1308-performance-optimization.mdc` - 性能优化系统化流程
-- `1309-troubleshooting.mdc` - 问题排查与根因分析
-- `1310-git-workflow-expert/` - Git 工作流专家
-- `1311-security-audit.mdc` - 项目安全审计与漏洞检查
-- `1315-incident-response/` - 生产应急响应专家
+- `0005-task-planning.mdc` - 任务规划与分解流程
+- `0006-code-review-workflow.mdc` - 代码审查工作流
+- `0007-refactoring-workflow.mdc` - 安全重构工作流
+- `0008-performance-optimization.mdc` - 性能优化系统化流程
+- `0009-troubleshooting.mdc` - 问题排查与根因分析
+- `0010-git-workflow-expert/` - Git 工作流专家
+- `0011-security-audit.mdc` - 项目安全审计与漏洞检查
+- `0012-incident-response/` - 生产应急响应专家
+
+## 编号约定
+
+- `skills/` 使用独立编号空间，从 `0001` 开始
+- 目录型技能与单文件技能共享同一编号序列
+- 编号用于导航，不与 `rules/` 的领域编号混用
 
 ## 使用场景
 

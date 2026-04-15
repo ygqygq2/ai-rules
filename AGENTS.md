@@ -1,28 +1,36 @@
 # AI Agent Instructions — ai-rules
 
-This repository is a **structured AI rules and asset library** organized by numbered categories.  
+This repository is a **structured AI rules and asset library** organized by **asset type first**, then by numbered subcategories where applicable.  
 When working in this repository, follow these guidelines.
 
 ## Repository Structure
 
-| Range | Category |
-|-------|----------|
-| 001–099 | General standards |
-| 100–199 | Programming languages |
-| 200–299 | Frameworks & libraries |
-| 300–399 | Databases |
-| 500–599 | API design |
-| 600–699 | Testing |
-| 700–799 | Security |
-| 800–899 | DevOps / CI·CD |
-| 900–999 | Architecture |
-| 1000–1099 | UI/UX design |
-| 1100–1199 | Project management |
-| 1200–1299 | Documentation |
-| 1300–1399 | Skills (SKILL.md directories) |
-| 1400–1499 | Agents (*.agent.md) |
-| 1500–1599 | Prompts (*.prompt.md) |
-| 1600–1699 | Commands (.claude/commands/) |
+| Top-level dir | Purpose | Numbering |
+|---------------|---------|-----------|
+| `rules/` | Domain rules and coding standards | Keep domain ranges such as 001–1299 |
+| `skills/` | Workflow skills and reusable methods | Independent `0001+` sequence |
+| `agents/` | Custom agent definitions (`*.agent.md`) | Independent `0001+` sequence |
+| `prompts/` | Prompt templates (`*.prompt.md`) | Independent `0001+` sequence |
+| `commands/` | Command templates and slash-command assets | Independent `0001+` sequence |
+| `hooks/` | Hook fragments and supporting scripts | Independent `0001+` sequence |
+| `mcp/` | MCP server fragments and related assets | Independent `0001+` sequence |
+
+## Why the repository is organized this way
+
+This repository is intentionally organized by **asset type first**, not by a single global numbering system.
+
+That design solves three practical problems:
+
+1. **Type must be obvious before topic**  
+	Many assets may share the same file format but have different meanings. For example, JSON under `hooks/` and JSON under `mcp/` are not interchangeable assets.
+
+2. **Humans and tools need the same signal**  
+	Maintainers should be able to tell what an asset is from its location, and sync/generation tools should be able to classify assets without guessing from file extension alone.
+
+3. **Numbering should be local to the asset type**  
+	`rules/` keeps its historical domain numbering, while `skills/`, `agents/`, `prompts/`, `commands/`, `hooks/`, and `mcp/` each use their own independent numbering space. This avoids cross-type number collisions and keeps navigation simple.
+
+In short: the structure is optimized for **clarity, synchronization safety, and long-term extensibility**, not just for visual tidiness.
 
 ## Asset Types
 
@@ -41,11 +49,11 @@ When working in this repository, follow these guidelines.
 - Skill directories must contain a `SKILL.md` as the entry point
 - Agent files should describe purpose, capabilities, and constraints
 - Prompt files should include a brief description and the prompt template
-- Keep numbered IDs unique; use the next available number in the range
+- Keep numbers unique **within the current asset type**, not across the whole repository
 
 ## Working Guidelines
 
 1. Read the relevant rule/skill file **before** generating code in that domain
-2. When adding new rules, place them in the correct category range and update the category `README.md`
+2. When adding new assets, decide the **asset type first**, then place them under the correct top-level directory and update the nearest `README.md`
 3. Prefer editing existing rules over creating duplicates
 4. Always validate frontmatter when modifying `.mdc` files
