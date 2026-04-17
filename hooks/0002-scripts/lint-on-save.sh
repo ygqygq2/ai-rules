@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-changed_file="${1:-}"
+input_json="$(cat)"
+changed_file="$(printf '%s' "$input_json" | sed -n 's/.*"file_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
 
-# 示例：文件写入后输出提示，真实项目可替换为 eslint / markdownlint / shellcheck 等
+# Claude PostToolUse 示例：文件写入/编辑后进行快速校验。
+# 如需真正执行 eslint / prettier / pytest，可在这里替换命令。
 if [[ -n "$changed_file" ]]; then
-  echo "[hook] post-write check placeholder for: $changed_file"
+  echo "[hook] post-write check placeholder for: $changed_file" >&2
 else
-  echo "[hook] post-write check placeholder"
+  echo "[hook] post-write check placeholder" >&2
 fi
 
 exit 0

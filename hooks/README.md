@@ -1,11 +1,17 @@
 # Hooks 资产
 
-这里存放 **hook 源资产**，而不是最终生成出来的 `settings.json`。
+这里存放 **hook 源资产**，而不是最终生成出来的 `settings.json` / 运行脚本目录。
 
 ## 约定
 
 - `0001-settings-fragments/`：可被 `merge-json` 合并的设置片段
 - `0002-scripts/`：hook 运行时使用的脚本文件
+
+当前内置示例以 **Claude Code hooks** 为基准：
+
+- 设置片段会被合并到 `.claude/settings.json`
+- 脚本会同步到 `.claude/hooks/`
+- 设置片段中的脚本路径应使用 `"$CLAUDE_PROJECT_DIR"/.claude/hooks/...`
 
 ## 编号约定
 

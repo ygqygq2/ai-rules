@@ -1,9 +1,14 @@
 {
-  "emeraldwalk.runonsave": {
-    "commands": [
+  "hooks": {
+    "PostToolUse": [
       {
-        "match": "\\.(ts|tsx|js|jsx)$",
-        "cmd": "bash ${workspaceFolder}/.ai/hooks/lint-on-save.sh ${file}"
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/lint-on-save.sh"
+          }
+        ]
       }
     ]
   }
